@@ -1,0 +1,2761 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minions RPG 3D - Armas & Habilidades</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Orbitron:wght@600;800;900&family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <style>
+        * {
+            font-family: 'Nunito', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        h1, h2, h3, .font-heading {
+            font-family: 'Fredoka One', cursive;
+        }
+        .font-tech {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #020617;
+            color: #ffffff;
+        }
+
+        #webgl-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Cutscene cinematográfica do especial Banana */
+        #banana-cinematic { position: fixed; inset: 0; z-index: 45; display: none; align-items: center; justify-content: center; overflow: hidden; pointer-events: none; background: radial-gradient(circle at center, rgba(120,75,0,.18), rgba(2,6,23,.72) 70%); }
+        #banana-cinematic.active { display: flex; animation: bananaCineIn .25s ease-out both; }
+        #banana-cinematic .cine-bar { position: absolute; left: 0; right: 0; height: 9vh; background: #020617; box-shadow: 0 0 25px rgba(0,0,0,.7); }
+        #banana-cinematic .cine-bar.top { top: 0; transform: translateY(-100%); }
+        #banana-cinematic .cine-bar.bottom { bottom: 0; transform: translateY(100%); }
+        #banana-cinematic.active .cine-bar.top { animation: cineBarTop .35s ease-out forwards; }
+        #banana-cinematic.active .cine-bar.bottom { animation: cineBarBottom .35s ease-out forwards; }
+        #banana-cinematic .cine-copy { position: relative; text-align: center; padding: 1.5rem; max-width: 900px; transform: scale(.72); opacity: 0; }
+        #banana-cinematic.active .cine-copy { animation: cineTitle .45s cubic-bezier(.2,.8,.2,1) .08s forwards; }
+        #banana-cinematic .cine-eyebrow { color: #67e8f9; font: 800 11px 'Orbitron',sans-serif; letter-spacing: .38em; text-transform: uppercase; text-shadow: 0 0 18px #22d3ee; }
+        #banana-cinematic .cine-title { margin: .35rem 0; color: #fde047; font: 900 clamp(2.4rem,8vw,6.5rem) 'Fredoka One',cursive; line-height: .98; text-shadow: 0 5px 0 #854d0e, 0 0 28px rgba(250,204,21,.8); }
+        #banana-cinematic .cine-subtitle { color: white; font: 900 clamp(.75rem,2vw,1.05rem) 'Orbitron',sans-serif; letter-spacing: .18em; text-transform: uppercase; }
+        #banana-cinematic .cine-fruit { font-size: clamp(4rem,13vw,9rem); filter: drop-shadow(0 0 28px rgba(250,204,21,.85)); animation: bananaFloat .55s ease-in-out infinite alternate; }
+        #banana-cinematic.impact { animation: cineImpact .24s ease-out; background: radial-gradient(circle, rgba(250,204,21,.38), rgba(2,6,23,.86) 68%); }
+        #banana-cinematic.impact .cine-title { color: #fff7ad; text-shadow: 0 0 14px #facc15, 0 0 42px #f59e0b; }
+        @keyframes bananaCineIn { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes cineBarTop { to { transform: translateY(0) } }
+        @keyframes cineBarBottom { to { transform: translateY(0) } }
+        @keyframes cineTitle { to { transform: scale(1); opacity: 1 } }
+        @keyframes bananaFloat { from { transform: translateY(5px) rotate(-5deg) scale(.96) } to { transform: translateY(-8px) rotate(5deg) scale(1.05) } }
+        @keyframes cineImpact { 0%,100% { transform: translateX(0) } 25% { transform: translateX(-8px) } 50% { transform: translateX(8px) } 75% { transform: translateX(-4px) } }
+        @media (prefers-reduced-motion: reduce) { #banana-cinematic *, #banana-cinematic.active .cine-copy { animation-duration: .01ms !important; } }
+
+        /* Glassmorphic UI Overlay */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(254, 224, 26, 0.35);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.15);
+        }
+
+        .glass-btn {
+            background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.03) 100%);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(254, 224, 26, 0.4);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.3);
+            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .glass-btn:hover:not(:disabled) {
+            transform: translateY(-3px) scale(1.02);
+            border-color: rgba(254, 224, 26, 0.9);
+            box-shadow: 0 8px 25px rgba(254, 224, 26, 0.5), inset 0 1px 2px rgba(255,255,255,0.5);
+        }
+
+        .glass-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.82);
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.3s ease;
+        }
+        .glass-card:hover {
+            border-color: #facc15;
+            box-shadow: 0 0 25px rgba(250, 204, 21, 0.4);
+            transform: translateY(-5px);
+        }
+
+        /* Floating Damage Text */
+        @keyframes floatDamage {
+            0% { opacity: 0; transform: translateY(20px) scale(0.6); }
+            20% { opacity: 1; transform: translateY(-10px) scale(1.3); }
+            80% { opacity: 1; transform: translateY(-35px) scale(1); }
+            100% { opacity: 0; transform: translateY(-60px) scale(0.8); }
+        }
+        .floating-text {
+            position: absolute;
+            font-family: 'Fredoka One', cursive;
+            pointer-events: none;
+            z-index: 50;
+            animation: floatDamage 1.3s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+            text-shadow: 0 0 10px rgba(0,0,0,0.9), 2px 2px 0 #000, -2px -2px 0 #000;
+        }
+
+        .status-badge {
+            animation: pulseBadge 1.5s infinite ease-in-out;
+        }
+        @keyframes pulseBadge {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .custom-scroll::-webkit-scrollbar { width: 5px; }
+        .custom-scroll::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
+        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(254, 224, 26, 0.5); border-radius: 4px; }
+
+        /* Seleção de personagens */
+        #screen-char-select {
+            max-height: calc(100dvh - 105px);
+            overflow-y: auto;
+            overflow-x: hidden;
+            overscroll-behavior: contain;
+            justify-content: flex-start;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(254, 224, 26, 0.75) rgba(0, 0, 0, 0.3);
+            padding-bottom: 5.5rem;
+        }
+        #screen-char-select::-webkit-scrollbar { width: 8px; }
+        #screen-char-select::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); border-radius: 8px; }
+        #screen-char-select::-webkit-scrollbar-thumb { background: rgba(254, 224, 26, 0.75); border-radius: 8px; }
+        #scroll-down-btn {
+            position: fixed;
+            right: max(14px, env(safe-area-inset-right));
+            bottom: max(14px, env(safe-area-inset-bottom));
+            z-index: 80;
+            box-shadow: 0 0 22px rgba(250, 204, 21, 0.4);
+        }
+
+        /* Layout de combate */
+        #ui-layer { min-height: 0; }
+        #screen-combat { min-height: 0; gap: 8px; }
+        #screen-combat > .grid { flex: 0 0 auto; max-height: min(36dvh, 330px); min-height: 0; align-items: stretch; }
+        #screen-combat .combat-actions-panel { min-height: 0; max-height: min(36dvh, 330px); overflow-y: auto; overscroll-behavior: contain; }
+        #skills-container { min-height: 0; align-content: start; }
+        #battle-log-panel { min-height: 0; max-height: min(36dvh, 330px); overflow: hidden; }
+        #battle-log { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+        #battle-log-toggle { flex: 0 0 auto; }
+        @media (max-width: 767px) {
+            #ui-layer { padding-top: 6px; padding-bottom: 6px; }
+            #screen-combat { padding-top: 0; padding-bottom: 0; gap: 6px; }
+            #screen-combat > .flex.justify-between.items-start { gap: 6px; }
+            #screen-combat > .flex.justify-between.items-start > div { width: min(48%, 210px); padding: 7px; }
+            #screen-combat > .grid { grid-template-columns: minmax(0, 1fr); gap: 5px; max-height: 42dvh; }
+            #screen-combat .combat-actions-panel { max-height: 33dvh; padding: 8px; }
+            #banana-charge-panel { padding: 6px; margin-bottom: 6px; }
+            #skills-container { max-height: 15dvh; overflow-y: auto; overscroll-behavior: contain; }
+            #battle-log-panel { max-height: 28px; height: 28px; padding: 5px 8px; transition: height .2s ease, max-height .2s ease; }
+            #battle-log-panel.log-open { height: 17dvh; max-height: 17dvh; }
+            #battle-log { max-height: calc(17dvh - 32px); }
+            #battle-log-panel.log-open #battle-log { display: block; }
+            #battle-log-panel:not(.log-open) #battle-log { display: none; }
+            #battle-log-panel > div:first-child { margin-bottom: 0; }
+            #battle-log-toggle { font-size: 10px; line-height: 1; padding: 3px 7px; }
+            #screen-combat footer { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 3D WEBGL CANVAS -->
+    <canvas id="webgl-canvas"></canvas>
+
+    <!-- OVERLAY UI LAYER -->
+    <div id="ui-layer" class="relative z-10 container mx-auto px-3 py-3 max-w-6xl h-full flex flex-col justify-between pointer-events-none">
+
+        <!-- HEADER BANNER -->
+        <header class="pointer-events-auto text-center flex justify-between items-center px-4 glass-panel py-2.5 rounded-2xl">
+            <div class="flex items-center gap-3">
+                <span class="text-3xl sm:text-4xl animate-bounce">🍌</span>
+                <div class="text-left">
+                    <h1 class="text-2xl sm:text-3xl font-heading text-yellow-400 tracking-wider drop-shadow-[0_0_15px_rgba(254,224,26,0.8)]">
+                        MINIONS RPG 3D
+                    </h1>
+                    <p class="text-[10px] sm:text-xs text-cyan-300 font-tech uppercase tracking-widest">Laboratório do Gru • Sistema de Marcas & Desgaste</p>
+                </div>
+            </div>
+
+            <!-- TURN ORDER HUD -->
+            <div id="timeline-hud" class="hidden glass-panel px-4 py-1.5 rounded-full flex items-center gap-3 border border-yellow-400/40">
+                <span class="text-[10px] text-slate-300 font-tech font-bold uppercase">Ordem de Turno:</span>
+                <div id="timeline-avatars" class="flex items-center gap-2"></div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button onclick="confirmRestartMatch()" id="restart-midgame-btn" class="hidden glass-btn px-3 py-1.5 rounded-xl text-xs font-bold text-yellow-300 border-yellow-400/60 hover:border-yellow-400">
+                    🔄 Reiniciar
+                </button>
+                <button onclick="toggleMute()" id="mute-btn" class="glass-btn px-3 py-1.5 rounded-xl text-xs font-bold text-slate-200">
+                    🔊 Som: ON
+                </button>
+            </div>
+        </header>
+
+        <!-- SCREEN 1: GAME MODE SELECTION -->
+        <section id="screen-mode" class="pointer-events-auto my-auto flex flex-col justify-center items-center py-6">
+            <div class="glass-panel rounded-3xl p-6 sm:p-10 max-w-2xl w-full text-center relative overflow-hidden border-2 border-yellow-400/50">
+                <h2 class="text-3xl sm:text-4xl font-heading text-yellow-300 mb-2">Simulador Tático 3D do Gru</h2>
+                <p class="text-slate-300 text-xs sm:text-sm mb-8">Agora com danos em tempo real! Os Minions ficam sujos, fedidos (verdes), congelados e marcados de combate!</p>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- PvE -->
+                    <button onclick="selectGameMode('pve')" class="glass-btn p-6 rounded-2xl flex flex-col items-center group cursor-pointer border-2 border-cyan-500/50">
+                        <div class="w-20 h-20 rounded-full bg-cyan-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition shadow-[0_0_20px_rgba(6,182,212,0.4)]">
+                            <span class="text-4xl">🤖</span>
+                        </div>
+                        <h3 class="text-xl font-heading text-cyan-300 mb-1">Treino PvE (VS IA)</h3>
+                        <p class="text-xs text-slate-300 leading-relaxed">Enfrente o Evil Minion PX-41 ou robôs com efeitos e desgaste realistas.</p>
+                    </button>
+
+                    <!-- STORY MODE -->
+                    <button onclick="openStoryCampaign()" class="glass-btn p-6 rounded-2xl flex flex-col items-center group cursor-pointer border-2 border-yellow-400/60">
+                        <div class="w-20 h-20 rounded-full bg-yellow-400/20 flex items-center justify-center mb-3 group-hover:scale-110 transition shadow-[0_0_20px_rgba(250,204,21,0.35)]">
+                            <span class="text-4xl">🎬</span>
+                        </div>
+                        <h3 class="text-xl font-heading text-yellow-200 mb-1">Modo História</h3>
+                        <p class="text-xs text-slate-300 leading-relaxed">5 capítulos cinematográficos, chefões, Minions desbloqueáveis e melhorias permanentes.</p>
+                    </button>
+
+                    <!-- PvP -->
+                    <button onclick="selectGameMode('pvp')" class="glass-btn p-6 rounded-2xl flex flex-col items-center group cursor-pointer border-2 border-purple-500/50">
+                        <div class="w-20 h-20 rounded-full bg-purple-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition shadow-[0_0_20px_rgba(168,85,247,0.4)]">
+                            <span class="text-4xl">⚔️</span>
+                        </div>
+                        <h3 class="text-xl font-heading text-purple-300 mb-1">Duelo PvP (1v1 Local)</h3>
+                        <p class="text-xs text-slate-300 leading-relaxed">Batalha tática em turnos entre 2 jogadores com física e marcas de luta.</p>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- SCREEN STORY: CAMPAIGN MAP -->
+        <section id="screen-story" class="pointer-events-auto hidden my-auto flex flex-col items-center py-3 w-full">
+            <div class="glass-panel rounded-3xl p-5 sm:p-7 max-w-4xl w-full max-h-[78vh] overflow-y-auto custom-scroll border-2 border-yellow-400/50">
+                <div class="text-center mb-5">
+                    <p class="font-tech text-[10px] tracking-[0.35em] text-cyan-300 uppercase">Arquivo confidencial do Gru</p>
+                    <h2 class="text-3xl sm:text-4xl font-heading text-yellow-300 mt-1">A Operação Banana</h2>
+                    <p class="text-sm text-slate-300 mt-2">Uma campanha de 5 capítulos. Lute, evolua e descubra quem está por trás do PX-41.</p>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5" id="story-chapter-list"></div>
+                <div id="story-progress-summary" class="rounded-2xl bg-slate-950/70 border border-cyan-500/30 p-4 mb-5 text-sm"></div>
+                <div class="flex flex-wrap justify-center gap-3">
+                    <button onclick="startStoryCampaign()" id="story-start-btn" class="glass-btn px-6 py-3 rounded-xl text-sm font-extrabold text-yellow-200">▶ Iniciar campanha</button>
+                    <button onclick="changeStoryHero()" class="glass-btn px-5 py-3 rounded-xl text-sm font-bold text-cyan-200">👤 Trocar Minion</button>
+                    <button onclick="showScreen('screen-mode')" class="glass-btn px-5 py-3 rounded-xl text-sm font-bold text-slate-200">← Menu principal</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- SCREEN 2: CHARACTER SELECTION GRID -->
+        <section id="screen-char-select" class="pointer-events-auto hidden my-auto flex flex-col justify-center items-center py-4">
+            <div class="w-full max-w-5xl">
+                <div class="text-center mb-4">
+                    <h2 id="select-title-indicator" class="text-2xl sm:text-3xl font-heading text-yellow-300">
+                        Jogador 1: Escolha seu Minion
+                    </h2>
+                    <p class="text-xs text-cyan-300 font-semibold mt-0.5">Observe a prévia em 3D das armas e selecione o combatente</p>
+                </div>
+
+                <div id="minions-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6"></div>
+
+                <div class="flex justify-center gap-3 flex-wrap">
+                    <button onclick="showScreen('screen-mode')" class="glass-btn px-6 py-2 rounded-xl text-xs font-bold text-slate-200">
+                        ← Menu Principal
+                    </button>
+                    <button onclick="scrollCharacterSelection('down')" class="glass-btn px-6 py-2 rounded-xl text-xs font-bold text-yellow-200">
+                        ⬇ Descer para ver mais Minions
+                    </button>
+                </div>
+            </div>
+            <button id="scroll-down-btn" onclick="scrollCharacterSelection('down')" class="glass-btn px-4 py-3 rounded-full text-sm font-extrabold text-yellow-200" aria-label="Descer a lista de personagens" title="Descer para ver mais personagens">
+                ⬇ Descer
+            </button>
+        </section>
+
+        <!-- SCREEN 3: COMBAT ARENA HUD -->
+        <section id="screen-combat" class="pointer-events-none hidden flex-1 flex flex-col justify-between py-2 relative">
+            
+            <!-- TOP PLAYER STATS OVERLAYS -->
+            <div class="flex justify-between items-start w-full">
+                <!-- PLAYER 1 HUD OVERLAY -->
+                <div class="pointer-events-auto w-52 sm:w-68 glass-panel p-3 rounded-2xl border-l-4 border-l-yellow-400">
+                    <div class="flex justify-between items-center text-xs font-bold mb-1">
+                        <span id="p1-hud-name" class="text-yellow-300 font-heading truncate text-sm">Kevin</span>
+                        <span id="p1-hud-hp-text" class="text-slate-100 font-tech text-[11px]">135/135</span>
+                    </div>
+                    <div class="w-full bg-slate-950/90 rounded-full h-3.5 overflow-hidden border border-slate-700">
+                        <div id="p1-hud-hp-bar" class="bg-gradient-to-r from-emerald-500 to-green-400 h-full transition-all duration-300 w-full"></div>
+                    </div>
+                    <!-- STATUS BADGES CONTAINER -->
+                    <div id="p1-status-badges" class="flex flex-wrap gap-1 mt-1.5 min-h-[22px]"></div>
+                    <div class="flex justify-between text-[10px] text-slate-300 mt-1 font-tech">
+                        <span>⚔️ ATK: <b id="p1-hud-atk" class="text-red-400">20</b></span>
+                        <span>🛡 DEF: <b id="p1-hud-def" class="text-cyan-300">15</b></span>
+                        <span>⚡ SPD: <b id="p1-hud-spd" class="text-yellow-400">12</b></span>
+                    </div>
+                </div>
+
+                <!-- PLAYER 2 HUD OVERLAY -->
+                <div class="pointer-events-auto w-52 sm:w-68 glass-panel p-3 rounded-2xl border-r-4 border-r-purple-500 text-right">
+                    <div class="flex justify-between items-center text-xs font-bold mb-1">
+                        <span id="p2-hud-hp-text" class="text-slate-100 font-tech text-[11px]">130/130</span>
+                        <span id="p2-hud-name" class="text-purple-300 font-heading truncate text-sm">Evil Minion</span>
+                    </div>
+                    <div class="w-full bg-slate-950/90 rounded-full h-3.5 overflow-hidden border border-slate-700">
+                        <div id="p2-hud-hp-bar" class="bg-gradient-to-r from-emerald-500 to-green-400 h-full transition-all duration-300 w-full ml-auto"></div>
+                    </div>
+                    <!-- STATUS BADGES CONTAINER -->
+                    <div id="p2-status-badges" class="flex flex-wrap gap-1 mt-1.5 justify-end min-h-[22px]"></div>
+                    <div class="flex justify-between text-[10px] text-slate-300 mt-1 font-tech">
+                        <span>⚡ SPD: <b id="p2-hud-spd" class="text-yellow-400">14</b></span>
+                        <span>🛡 DEF: <b id="p2-hud-def" class="text-cyan-300">12</b></span>
+                        <span>⚔️ ATK: <b id="p2-hud-atk" class="text-red-400">25</b></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BOTTOM CONTROLS & LOG BOX -->
+            <div class="pointer-events-auto grid grid-cols-1 md:grid-cols-3 gap-2 mt-auto">
+                <!-- Action Buttons Box -->
+                <div class="md:col-span-2 glass-panel rounded-2xl p-3 flex flex-col justify-between combat-actions-panel">
+                    <div class="text-xs font-bold text-slate-300 mb-1 flex items-center justify-between">
+                        <span class="uppercase text-cyan-300 font-tech">Arsenal & Habilidades:</span>
+                        <span id="active-player-tag" class="text-yellow-400 font-heading text-sm">Turno de Kevin</span>
+                    </div>
+                    <div id="banana-charge-panel" class="mb-2 rounded-xl border border-yellow-400/40 bg-yellow-950/30 p-2">
+                        <div class="flex items-center justify-between gap-2 text-[10px] font-bold">
+                            <span class="text-yellow-200">🍌 ESPECIAL: BANANA GIGANTE</span>
+                            <span id="banana-charge-text" class="text-slate-200 font-tech">Carga 0/100</span>
+                        </div>
+                        <div class="mt-1 h-2 rounded-full overflow-hidden bg-slate-950 border border-yellow-900/70">
+                            <div id="banana-charge-bar" class="h-full w-0 bg-gradient-to-r from-yellow-500 via-yellow-300 to-lime-300 transition-all duration-300"></div>
+                        </div>
+                        <div id="banana-charge-state" class="mt-1 text-[9px] text-slate-400">Cause dano para carregar o especial!</div>
+                    </div>
+                    <div id="skills-container" class="grid grid-cols-3 gap-2"></div>
+                </div>
+
+                <!-- Combat Log -->
+                <div id="battle-log-panel" class="glass-panel rounded-2xl p-2.5 flex flex-col h-28 md:h-auto">
+                    <div class="text-[10px] font-bold text-yellow-400 uppercase tracking-wider mb-1 flex items-center justify-between gap-2 font-tech">
+                        <span>📜 Log do Laboratório 3D</span>
+                        <button id="battle-log-toggle" type="button" onclick="toggleBattleLog()" class="glass-btn rounded-lg px-2 py-1 text-yellow-100" aria-expanded="false" aria-controls="battle-log">＋ Log</button>
+                    </div>
+                    <div id="battle-log" class="flex-1 overflow-y-auto text-[11px] space-y-1 custom-scroll font-medium pr-1"></div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- FOOTER -->
+        <footer class="pointer-events-auto text-center text-[10px] text-slate-400 py-1">
+            Minions RPG 3D • Sistema Dinâmico de Armas & Desgaste Visual
+        </footer>
+
+    </div>
+
+    <!-- CUTSCENE: BANANA GIGANTE -->
+    <div id="banana-cinematic" aria-hidden="true">
+        <div class="cine-bar top"></div><div class="cine-bar bottom"></div>
+        <div class="cine-copy">
+            <div class="cine-fruit" id="banana-cine-fruit">🍌</div>
+            <div class="cine-eyebrow" id="banana-cine-eyebrow">ESPECIAL CARREGADO</div>
+            <div class="cine-title" id="banana-cine-title">BANANA GIGANTE!</div>
+            <div class="cine-subtitle" id="banana-cine-subtitle">PREPARE-SE PARA O IMPACTO</div>
+        </div>
+    </div>
+
+    <!-- MODAL: RESTART CONFIRMATION (NON-INTRUSIVE) -->
+    <div id="restart-confirm-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+        <div class="glass-panel rounded-3xl border-2 border-yellow-400/70 p-6 max-w-sm w-full text-center shadow-2xl">
+            <div class="text-4xl mb-2">⚠️</div>
+            <h3 class="text-2xl font-heading text-yellow-300 mb-2">Reiniciar Batalha?</h3>
+            <p class="text-xs text-slate-300 mb-5">O progresso atual desta luta será zerado.</p>
+            <div class="flex gap-2">
+                <button onclick="closeRestartModal()" class="flex-1 py-2.5 rounded-xl glass-btn text-slate-200 text-xs font-bold">Cancelar</button>
+                <button onclick="closeRestartModal(); restartMatch();" class="flex-1 py-2.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-heading text-sm font-bold">Reiniciar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: VICTORY / GAME OVER -->
+    <div id="victory-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel rounded-3xl border-2 border-yellow-400 p-6 max-w-md w-full text-center shadow-2xl">
+            <div class="text-6xl mb-2 animate-bounce">🏆</div>
+            <h2 id="winner-title" class="text-3xl font-heading text-yellow-300 mb-1">VITÓRIA!</h2>
+            <p id="winner-desc" class="text-slate-300 text-xs mb-4">O campeão dominou o laboratório 3D do Gru!</p>
+            <div id="story-reward-panel" class="hidden text-left rounded-2xl bg-slate-950/80 border border-yellow-400/40 p-3 mb-4"></div>
+
+            <div class="flex flex-col gap-2">
+                <button onclick="restartMatch()" class="w-full py-3 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-heading text-lg font-bold transition shadow-lg">
+                    🔄 Jogar Novamente
+                </button>
+                <button onclick="chooseAnotherMinion()" id="victory-change-minion-btn" class="w-full py-2 rounded-xl glass-btn text-slate-200 text-xs font-bold">
+                    👤 Escolher Outro Minion
+                </button>
+                <button onclick="storyContinueAfterVictory()" id="story-continue-btn" class="hidden w-full py-3 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-heading text-sm font-bold transition">
+                    ➡️ Continuar história
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CINEMATIC STORY DIALOGUE -->
+    <div id="story-scene-modal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-lg z-[60] hidden items-center justify-center p-4">
+        <div class="relative overflow-hidden glass-panel rounded-3xl border-2 border-cyan-400/50 p-6 sm:p-9 max-w-2xl w-full shadow-[0_0_60px_rgba(34,211,238,0.18)]">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-cyan-400 via-yellow-300 to-purple-500"></div>
+            <div class="flex items-center gap-3 mb-5">
+                <div class="w-12 h-12 rounded-2xl bg-cyan-400/15 border border-cyan-300/30 flex items-center justify-center text-2xl">🎬</div>
+                <div><p class="font-tech text-[10px] tracking-[0.3em] text-cyan-300 uppercase">Cena da campanha</p><h2 id="story-scene-title" class="text-2xl sm:text-3xl font-heading text-yellow-300">A Operação Banana</h2></div>
+            </div>
+            <div class="rounded-2xl bg-slate-950/75 border border-white/10 p-5 min-h-[130px] flex items-center">
+                <p id="story-scene-text" class="text-base sm:text-lg leading-relaxed text-slate-100">Tudo começou no laboratório...</p>
+            </div>
+            <div class="flex justify-between items-center gap-3 mt-5">
+                <span id="story-scene-counter" class="font-tech text-[10px] text-slate-400">CENA 1 / 3</span>
+                <button onclick="advanceStoryScene()" id="story-scene-next" class="glass-btn px-6 py-3 rounded-xl text-sm font-extrabold text-yellow-200">Próximo diálogo →</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ==========================================================================
+           1. PROCEDURAL SOUND ENGINE (WEB AUDIO API)
+           ========================================================================== */
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) {
+                        this.ctx = new AudioContext();
+                    }
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume().catch(() => {});
+                }
+            }
+
+            playLaser() {
+                if (this.muted) return; this.init(); if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(1400, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.25);
+                gain.gain.setValueAtTime(0.28, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.25);
+            }
+
+            playFreeze() {
+                if (this.muted) return; this.init(); if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1800, this.ctx.currentTime + 0.35);
+                gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.35);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.35);
+            }
+
+            playFartGun() {
+                if (this.muted) return; this.init(); if (!this.ctx) return;
+                const bufferSize = Math.floor(this.ctx.sampleRate * 0.45);
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(350, this.ctx.currentTime);
+                filter.frequency.linearRampToValueAtTime(60, this.ctx.currentTime + 0.4);
+
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.65, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+
+                noise.connect(filter); filter.connect(gain); gain.connect(this.ctx.destination);
+                noise.start();
+            }
+
+            playExplosion() {
+                if (this.muted) return; this.init(); if (!this.ctx) return;
+                const bufferSize = Math.floor(this.ctx.sampleRate * 0.5);
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.35));
+
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(220, this.ctx.currentTime);
+                filter.frequency.exponentialRampToValueAtTime(45, this.ctx.currentTime + 0.5);
+
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.75, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
+
+                noise.connect(filter); filter.connect(gain); gain.connect(this.ctx.destination);
+                noise.start();
+            }
+
+            playHit() {
+                if (this.muted) return; this.init(); if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(220, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(55, this.ctx.currentTime + 0.16);
+                gain.gain.setValueAtTime(0.35, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.16);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.16);
+            }
+
+            playHeal() {
+                if (this.muted) return; this.init(); if (!this.ctx) return;
+                const notes = [523.25, 659.25, 783.99, 1046.5];
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    const t = this.ctx.currentTime + idx * 0.07;
+                    osc.frequency.setValueAtTime(freq, t);
+                    gain.gain.setValueAtTime(0.2, t);
+                    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.25);
+                    osc.connect(gain); gain.connect(this.ctx.destination);
+                    osc.start(t); osc.stop(t + 0.25);
+                });
+            }
+
+            playBananaSpecial() {
+                if (this.muted) return; this.init(); if (!this.ctx) return;
+                const chord = [440, 554.37, 659.25, 880];
+                chord.forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    const t = this.ctx.currentTime + i * 0.06;
+                    osc.frequency.setValueAtTime(freq, t);
+                    osc.frequency.exponentialRampToValueAtTime(freq * 1.35, t + 0.45);
+                    gain.gain.setValueAtTime(0.18, t);
+                    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.45);
+                    osc.connect(gain); gain.connect(this.ctx.destination);
+                    osc.start(t); osc.stop(t + 0.45);
+                });
+                setTimeout(() => this.playExplosion(), 650);
+            }
+
+            playVictory() {
+                if (this.muted) return; this.init(); if (!this.ctx) return;
+                const melody = [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5];
+                melody.forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    const t = this.ctx.currentTime + i * 0.11;
+                    osc.frequency.setValueAtTime(freq, t);
+                    gain.gain.setValueAtTime(0.25, t);
+                    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+                    osc.connect(gain); gain.connect(this.ctx.destination);
+                    osc.start(t); osc.stop(t + 0.3);
+                });
+            }
+        }
+
+        const sound = new SoundEngine();
+
+        function toggleMute() {
+            sound.muted = !sound.muted;
+            const btn = document.getElementById('mute-btn');
+            if (btn) btn.textContent = sound.muted ? '🔇 Som: OFF' : '🔊 Som: ON';
+        }
+
+        /* ==========================================================================
+           2. ROSTER DE MINIONS & CAMPANHA MODO HISTÓRIA
+           ========================================================================== */
+        const MINIONS_DB = [
+            {
+                id: 'kevin',
+                name: 'Kevin',
+                role: 'Líder Estratégico',
+                emoji: '🍌',
+                weaponName: 'Raio Congelante Tático',
+                weaponType: 'freeze_ray',
+                color: '#facc15',
+                bodyColor: 0xfacc15,
+                overallColor: 0x1d4ed8,
+                heightScale: 1.18,
+                widthScale: 0.94,
+                eyes: 2,
+                hairStyle: 'sprout',
+                unlockedByDefault: true,
+                stats: { hp: 145, atk: 24, def: 16, spd: 14 },
+                desc: 'Alto, focado e equipado com o Raio Congelante do Gru para controlar a arena.',
+                skills: [
+                    { name: 'Disparo de Banana', icon: '🍌', type: 'damage', power: 1.05, sound: 'laser', desc: 'Tiro preciso com carga de banana.' },
+                    { name: 'Raio Congelante', icon: '❄️', type: 'freeze', power: 0.9, sound: 'freeze', desc: 'Dano + congela e prende o alvo no gelo.' },
+                    { name: 'Comando do Líder', icon: '🛡️', type: 'heal_shield', power: 28, sound: 'heal', desc: 'Recupera HP e limpa sujeira/fedor.' }
+                ]
+            },
+            {
+                id: 'stuart',
+                name: 'Stuart',
+                role: 'Artilheiro Sônico',
+                emoji: '🎸',
+                weaponName: 'Arma de Pum Sônica',
+                weaponType: 'fart_gun',
+                color: '#38bdf8',
+                bodyColor: 0xfacc15,
+                overallColor: 0x1e40af,
+                heightScale: 1.0,
+                widthScale: 1.0,
+                eyes: 1,
+                hairStyle: 'parted',
+                unlockedByDefault: true,
+                stats: { hp: 130, atk: 27, def: 13, spd: 17 },
+                desc: 'Caolho rebelde armado com a lendária Arma de Pum de nuvem tóxica verde.',
+                skills: [
+                    { name: 'Riff Explosivo', icon: '⚡', type: 'damage', power: 1.15, sound: 'explosion', desc: 'Onda sonora que deixa marcas de fuligem.' },
+                    { name: 'Nuvem de Pum', icon: '💨', type: 'stink', power: 0.85, sound: 'fart', desc: 'Deixa o inimigo verde e fedido por 2 turnos!' },
+                    { name: 'Solo Rebelde', icon: '🔥', type: 'crit', power: 1.35, sound: 'laser', desc: 'Ataque veloz de alto impacto crítico.' }
+                ]
+            },
+            {
+                id: 'bob',
+                name: 'Bob',
+                role: 'Guardião Carismático',
+                emoji: '🧸',
+                weaponName: 'Lança-Bananas & Tim',
+                weaponType: 'banana_launcher',
+                color: '#4ade80',
+                bodyColor: 0xfacc15,
+                overallColor: 0x2563eb,
+                heightScale: 0.84,
+                widthScale: 1.08,
+                eyes: 2,
+                hairStyle: 'bald',
+                unlockedByDefault: true,
+                stats: { hp: 165, atk: 20, def: 20, spd: 11 },
+                desc: 'Baixinho resistente com dois olhos de cores diferentes e coração gigante.',
+                skills: [
+                    { name: 'Investida do Tim', icon: '🧸', type: 'damage', power: 1.0, sound: 'hit', desc: 'Golpe duplo adorável e surpreendente.' },
+                    { name: 'Abraço Restaurador', icon: '💚', type: 'heal_shield', power: 36, sound: 'heal', desc: 'Cura grande quantidade de HP e purifica efeitos.' },
+                    { name: 'Chuva de Bananas', icon: '🍌', type: 'explosion', power: 1.25, sound: 'explosion', desc: 'Explosão doce que suja o oponente.' }
+                ]
+            },
+            {
+                id: 'dave',
+                name: 'Dave',
+                role: 'Especialista em Foguetes',
+                emoji: '🚀',
+                weaponName: 'Bazuca de Bananas',
+                weaponType: 'rocket_launcher',
+                color: '#fb923c',
+                bodyColor: 0xfacc15,
+                overallColor: 0x1d4ed8,
+                heightScale: 1.02,
+                widthScale: 1.02,
+                eyes: 2,
+                hairStyle: 'spiky',
+                unlockedByDefault: true,
+                stats: { hp: 135, atk: 29, def: 12, spd: 15 },
+                desc: 'Adora explosões no laboratório e dispara foguetes de altíssimo dano.',
+                skills: [
+                    { name: 'Foguete de Banana', icon: '🚀', type: 'explosion', power: 1.2, sound: 'explosion', desc: 'Explosão direta que deixa marcas de cinzas.' },
+                    { name: 'Bomba de Fumaça', icon: '💣', type: 'stink', power: 0.9, sound: 'fart', desc: 'Gás tóxico do laboratório com dano contínuo.' },
+                    { name: 'Sobrecarga Térmica', icon: '💥', type: 'crit', power: 1.4, sound: 'explosion', desc: 'Disparo máximo da bazuca!' }
+                ]
+            },
+            {
+                id: 'otto',
+                name: 'Otto',
+                role: 'Velocista das Pedras',
+                emoji: '🪨',
+                weaponName: 'Estilingue Cósmico',
+                weaponType: 'slingshot',
+                color: '#22d3ee',
+                bodyColor: 0xfacc15,
+                overallColor: 0x1e3a8a,
+                heightScale: 0.95,
+                widthScale: 1.12,
+                eyes: 2,
+                hairStyle: 'sprout',
+                unlockedByDefault: false,
+                stats: { hp: 140, atk: 25, def: 15, spd: 19 },
+                desc: 'Desbloqueado na campanha! Ultra veloz com disparos de energia zodiacal.',
+                skills: [
+                    { name: 'Tiro da Pedra', icon: '💎', type: 'damage', power: 1.1, sound: 'laser', desc: 'Projétil rápido que carrega muito especial.' },
+                    { name: 'Raio Glacial', icon: '🧊', type: 'freeze', power: 0.95, sound: 'freeze', desc: 'Prende o oponente em um bloco de gelo.' },
+                    { name: 'Turbo Tagarela', icon: '⚡', type: 'crit', power: 1.32, sound: 'hit', desc: 'Combo frenético em alta velocidade.' }
+                ]
+            },
+            {
+                id: 'evil_minion',
+                name: 'Evil Minion PX-41',
+                role: 'Mutante Indestrutível',
+                emoji: '👾',
+                weaponName: 'Garras & Canhão PX-41',
+                weaponType: 'px41_cannon',
+                color: '#c084fc',
+                bodyColor: 0x7e22ce,
+                overallColor: 0x111827,
+                heightScale: 1.12,
+                widthScale: 1.15,
+                eyes: 2,
+                hairStyle: 'wild',
+                unlockedByDefault: false,
+                stats: { hp: 160, atk: 30, def: 14, spd: 16 },
+                desc: 'Desbloqueado ao vencer a campanha! Mutação roxa movida ao soro PX-41.',
+                skills: [
+                    { name: 'Mordida Selvagem', icon: '🦷', type: 'damage', power: 1.18, sound: 'hit', desc: 'Ataque brutal que deixa arranhões.' },
+                    { name: 'Sopro Tóxico PX-41', icon: '☣️', type: 'stink', power: 0.95, sound: 'fart', desc: 'Contamina o rival com névoa mutante.' },
+                    { name: 'Meteoro Roxo', icon: '☄️', type: 'explosion', power: 1.38, sound: 'explosion', desc: 'Impacto devastador no centro da arena.' }
+                ]
+            }
+        ];
+
+        const STORY_CHAPTERS = [
+            {
+                id: 1,
+                title: 'Cap. 1: Alarme no Subsolo',
+                subtitle: 'Treino de Emergência com Dave',
+                enemyId: 'dave',
+                enemyBoost: { hp: 0, atk: -3, def: 0 },
+                rewardText: '+10 HP Máximo permanente',
+                rewardBonus: { hp: 10, atk: 0, def: 0 },
+                unlockId: null,
+                intro: [
+                    '🚨 ALERTA VERMELHO no Laboratório do Gru! Um frasco experimental do soro PX-41 desapareceu do cofre principal.',
+                    'Dr. Nefario ativa o protocolo de treinamento tático: "Antes de enfrentar os mutantes, provem que dominam o arsenal!"',
+                    'Dave entra na arena segurando sua Bazuca de Bananas pronta para o teste de fogo!'
+                ],
+                outro: [
+                    '💥 Vitória limpa! O laboratório reconheceu sua assinatura tática e reforçou seu traje de combate (+10 HP permanente).'
+                ]
+            },
+            {
+                id: 2,
+                title: 'Cap. 2: Caos Sônico no Hangar',
+                subtitle: 'O Duelo da Arma de Pum',
+                enemyId: 'stuart',
+                enemyBoost: { hp: 10, atk: 0, def: 1 },
+                rewardText: '+3 ATK permanente & Desbloqueia Otto',
+                rewardBonus: { hp: 0, atk: 3, def: 0 },
+                unlockId: 'otto',
+                intro: [
+                    '💨 Uma nuvem verde suspeita toma conta do hangar de foguetes! Stuart está testando a Arma de Pum no volume máximo.',
+                    'Otto aparece correndo: "Bello! O ladrão do PX-41 escapou para o setor criogênico, mas Stuart bloqueou a comporta!"',
+                    'Derrote Stuart para liberar passagem e recrutar Otto para o esquadrão!'
+                ],
+                outro: [
+                    '🎸 Stuart abaixa a guitarra: "Ok, ok, vocês mandam bem!" Otto agora faz parte da sua equipe desbloqueada!'
+                ]
+            },
+            {
+                id: 3,
+                title: 'Cap. 3: Câmara Criogênica',
+                subtitle: 'O Teste do Gelo Absoluto',
+                enemyId: 'kevin',
+                enemyBoost: { hp: 20, atk: 2, def: 2 },
+                rewardText: '+3 DEF permanente',
+                rewardBonus: { hp: 0, atk: 0, def: 3 },
+                unlockId: null,
+                intro: [
+                    '❄️ A temperatura cai para -30°C! O sistema de segurança congelou as portas e colocou o Clone Tático de Kevin em modo de defesa.',
+                    'Cuidado com o Raio Congelante: se ficar preso no gelo, perderá a chance de agir!'
+                ],
+                outro: [
+                    '🛡️ O escudo criogênico foi desativado e suas placas de defesa foram reforçadas (+3 DEF permanente)!'
+                ]
+            },
+            {
+                id: 4,
+                title: 'Cap. 4: Emboscada Roxa',
+                subtitle: 'O Primeiro Protótipo PX-41',
+                enemyId: 'evil_minion',
+                enemyBoost: { hp: 15, atk: 1, def: 1 },
+                rewardText: '+15 HP & +2 ATK permanentes',
+                rewardBonus: { hp: 15, atk: 2, def: 0 },
+                unlockId: null,
+                intro: [
+                    '👾 Rosnados ecoam pelos tubos de ventilação! Um Minion roxo mutante salta na plataforma destruindo caixas de banana.',
+                    'É hora de carregar o Especial BANANA GIGANTE ao máximo para conter a fúria do PX-41!'
+                ],
+                outro: [
+                    '🍌 O protótipo recua atordoado! Falta apenas um confronto no núcleo do reator!'
+                ]
+            },
+            {
+                id: 5,
+                title: 'Cap. 5: Operação Banana Final',
+                subtitle: 'Chefe Supremo PX-41 Ômega',
+                enemyId: 'evil_minion',
+                enemyNameOverride: 'Chefe PX-41 Ômega',
+                enemyBoost: { hp: 45, atk: 5, def: 3 },
+                rewardText: 'Desbloqueia Evil Minion PX-41 & Título Campeão',
+                rewardBonus: { hp: 15, atk: 3, def: 2 },
+                unlockId: 'evil_minion',
+                intro: [
+                    '⚡ NÚCLEO DO REATOR! O Chefe PX-41 Ômega absorveu toda a reserva de energia do laboratório!',
+                    'Gru transmite pelo comunicador: "Usem tudo o que aprenderam! Se a Banana Gigante acertar em cheio, a vitória é nossa!"'
+                ],
+                outro: [
+                    '🏆 OPERAÇÃO BANANA CONCLUÍDA! O laboratório está salvo e o Evil Minion PX-41 agora está disponível no seu elenco!'
+                ]
+            }
+        ];
+
+        /* ==========================================================================
+           3. ESTADO DO JOGO & PERSISTÊNCIA
+           ========================================================================== */
+        const STORAGE_KEY = 'minions_rpg_3d_save_v1';
+
+        function loadSaveData() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    return {
+                        unlockedIds: Array.isArray(parsed.unlockedIds) ? parsed.unlockedIds : ['kevin', 'stuart', 'bob', 'dave'],
+                        completedChapters: Array.isArray(parsed.completedChapters) ? parsed.completedChapters : [],
+                        selectedChapter: parsed.selectedChapter || 1,
+                        storyHeroId: parsed.storyHeroId || 'kevin',
+                        bonus: parsed.bonus || { hp: 0, atk: 0, def: 0 }
+                    };
+                }
+            } catch (e) {}
+            return {
+                unlockedIds: ['kevin', 'stuart', 'bob', 'dave'],
+                completedChapters: [],
+                selectedChapter: 1,
+                storyHeroId: 'kevin',
+                bonus: { hp: 0, atk: 0, def: 0 }
+            };
+        }
+
+        let saveData = loadSaveData();
+
+        function persistSaveData() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
+            } catch (e) {}
+        }
+
+        const gameState = {
+            mode: 'pve', // 'pve', 'pvp', 'story'
+            selectStep: 1,
+            p1TemplateId: 'kevin',
+            p2TemplateId: 'evil_minion',
+            p1: null,
+            p2: null,
+            turnQueue: [],
+            currentTurnIndex: 0,
+            isBusy: false,
+            isGameOver: false,
+            activeStoryChapter: null,
+            pendingDialogues: [],
+            dialogueIndex: 0,
+            dialogueMode: 'intro',
+            dialogueTitle: ''
+        };
+
+        /* ==========================================================================
+           4. THREE.JS 3D SCENE, ARENA & PROCEDURAL MINION BUILDER
+           ========================================================================== */
+        let scene, camera, renderer, clock;
+        let p1Rig = null, p2Rig = null;
+        let activeParticles = [];
+        let activeProjectiles = [];
+        let giantBananaThrow = null;
+        let miniBananas = [];
+        let shockwaveRings = [];
+        let cameraShakeTime = 0;
+        let cameraShakeIntensity = 0;
+        let baseCameraPos = new THREE.Vector3(0, 4.4, 10.2);
+        let baseCameraLookAt = new THREE.Vector3(0, 1.4, 0);
+
+        function initThreeJS() {
+            const canvas = document.getElementById('webgl-canvas');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x020617);
+            scene.fog = new THREE.FogExp2(0x020617, 0.032);
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.copy(baseCameraPos);
+            camera.lookAt(baseCameraLookAt);
+
+            renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+            clock = new THREE.Clock();
+
+            // Iluminação
+            const ambientLight = new THREE.AmbientLight(0x94a3b8, 0.85);
+            scene.add(ambientLight);
+
+            const keyLight = new THREE.DirectionalLight(0xffffff, 1.25);
+            keyLight.position.set(6, 14, 8);
+            keyLight.castShadow = true;
+            keyLight.shadow.mapSize.width = 1024;
+            keyLight.shadow.mapSize.height = 1024;
+            scene.add(keyLight);
+
+            const cyanRim = new THREE.PointLight(0x22d3ee, 1.6, 22);
+            cyanRim.position.set(-7, 4, -4);
+            scene.add(cyanRim);
+
+            const yellowRim = new THREE.PointLight(0xfacc15, 1.4, 22);
+            yellowRim.position.set(7, 4, -4);
+            scene.add(yellowRim);
+
+            buildLabArena();
+
+            // Minions iniciais de vitrine na tela inicial
+            p1Rig = createMinion3D(MINIONS_DB[0], 'left');
+            p2Rig = createMinion3D(MINIONS_DB[5], 'right');
+            scene.add(p1Rig.root);
+            scene.add(p2Rig.root);
+
+            window.addEventListener('resize', onWindowResize);
+            animate();
+        }
+
+        function buildLabArena() {
+            // Textura procedural para o piso metálico do laboratório
+            const floorCanvas = document.createElement('canvas');
+            floorCanvas.width = 512;
+            floorCanvas.height = 512;
+            const fCtx = floorCanvas.getContext('2d');
+            fCtx.fillStyle = '#0f172a';
+            fCtx.fillRect(0, 0, 512, 512);
+            fCtx.strokeStyle = 'rgba(56, 189, 248, 0.16)';
+            fCtx.lineWidth = 3;
+            for (let i = 0; i <= 512; i += 64) {
+                fCtx.beginPath(); fCtx.moveTo(i, 0); fCtx.lineTo(i, 512); fCtx.stroke();
+                fCtx.beginPath(); fCtx.moveTo(0, i); fCtx.lineTo(512, i); fCtx.stroke();
+            }
+            fCtx.strokeStyle = 'rgba(250, 204, 21, 0.25)';
+            fCtx.lineWidth = 6;
+            fCtx.strokeRect(8, 8, 496, 496);
+            const floorTex = new THREE.CanvasTexture(floorCanvas);
+            floorTex.wrapS = THREE.RepeatWrapping;
+            floorTex.wrapT = THREE.RepeatWrapping;
+            floorTex.repeat.set(4, 4);
+
+            // Plataforma principal
+            const platformGeo = new THREE.CylinderGeometry(6.8, 7.4, 0.7, 64);
+            const platformMat = new THREE.MeshStandardMaterial({
+                map: floorTex,
+                color: 0x1e293b,
+                metalness: 0.65,
+                roughness: 0.28
+            });
+            const platform = new THREE.Mesh(platformGeo, platformMat);
+            platform.position.y = -0.35;
+            platform.receiveShadow = true;
+            scene.add(platform);
+
+            // Anel neon da arena
+            const ringGeo = new THREE.TorusGeometry(6.65, 0.09, 20, 72);
+            const ringMat = new THREE.MeshStandardMaterial({
+                color: 0xfacc15,
+                emissive: 0xfacc15,
+                emissiveIntensity: 0.65
+            });
+            const ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.rotation.x = Math.PI / 2;
+            ring.position.y = 0.02;
+            scene.add(ring);
+
+            // Anel interno ciano
+            const innerRingGeo = new THREE.TorusGeometry(4.2, 0.045, 16, 64);
+            const innerRingMat = new THREE.MeshStandardMaterial({
+                color: 0x22d3ee,
+                emissive: 0x22d3ee,
+                emissiveIntensity: 0.7
+            });
+            const innerRing = new THREE.Mesh(innerRingGeo, innerRingMat);
+            innerRing.rotation.x = Math.PI / 2;
+            innerRing.position.y = 0.02;
+            scene.add(innerRing);
+
+            // Grade holográfica do laboratório
+            const gridHelper = new THREE.GridHelper(32, 32, 0x1e293b, 0x0f172a);
+            gridHelper.position.y = -0.7;
+            scene.add(gridHelper);
+
+            // Pilares de energia do fundo
+            for (let i = -2; i <= 2; i++) {
+                if (i === 0) continue;
+                const pillarGeo = new THREE.CylinderGeometry(0.28, 0.35, 7, 20);
+                const pillarMat = new THREE.MeshStandardMaterial({
+                    color: 0x1e293b,
+                    metalness: 0.85,
+                    roughness: 0.2
+                });
+                const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+                pillar.position.set(i * 3.4, 2.8, -6.5);
+                scene.add(pillar);
+
+                const coreGeo = new THREE.CylinderGeometry(0.12, 0.12, 6.2, 16);
+                const coreColor = i % 2 === 0 ? 0x22d3ee : 0xfacc15;
+                const coreMat = new THREE.MeshStandardMaterial({
+                    color: coreColor,
+                    emissive: coreColor,
+                    emissiveIntensity: 0.85
+                });
+                const core = new THREE.Mesh(coreGeo, coreMat);
+                core.position.copy(pillar.position);
+                scene.add(core);
+            }
+        }
+
+        function createGruEmblemTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128;
+            canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.arc(64, 64, 56, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.lineWidth = 8;
+            ctx.strokeStyle = '#94a3b8';
+            ctx.stroke();
+
+            ctx.fillStyle = '#f8fafc';
+            ctx.font = 'bold 68px Orbitron, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('G', 64, 68);
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function createDenimTexture(baseHex) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            const color = new THREE.Color(baseHex);
+            ctx.fillStyle = `#${color.getHexString()}`;
+            ctx.fillRect(0, 0, 256, 256);
+
+            // Trama diagonal sutil de jeans
+            ctx.fillStyle = 'rgba(255,255,255,0.06)';
+            for (let y = 0; y < 256; y += 4) {
+                for (let x = 0; x < 256; x += 4) {
+                    if ((x + y) % 8 === 0) ctx.fillRect(x, y, 2, 2);
+                }
+            }
+            // Costuras amarelas
+            ctx.strokeStyle = 'rgba(250, 204, 21, 0.55)';
+            ctx.setLineDash([6, 4]);
+            ctx.lineWidth = 3;
+            ctx.strokeRect(10, 10, 236, 236);
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            return tex;
+        }
+
+        function buildWeapon3D(weaponType) {
+            const group = new THREE.Group();
+            const gunMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.85, roughness: 0.22 });
+            const darkMetalMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.9, roughness: 0.2 });
+            const accentMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.45, roughness: 0.28 });
+            const copperMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.8, roughness: 0.25 });
+
+            // Empunhadura ergonômica comum
+            const grip = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.34, 0.14), darkMetalMat);
+            grip.position.set(0.02, -0.14, 0);
+            grip.rotation.z = 0.22;
+            group.add(grip);
+
+            if (weaponType === 'freeze_ray') {
+                // Corpo principal
+                const body = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.22, 0.95, 20), gunMat);
+                body.rotation.z = Math.PI / 2;
+                body.position.x = 0.35;
+                group.add(body);
+
+                // Anéis criogênicos brilhantes
+                [0.25, 0.48, 0.7].forEach((rx, idx) => {
+                    const coil = new THREE.Mesh(
+                        new THREE.TorusGeometry(0.21 - idx * 0.015, 0.032, 12, 24),
+                        new THREE.MeshStandardMaterial({
+                            color: 0x38bdf8,
+                            emissive: 0x0284c7,
+                            emissiveIntensity: 0.9
+                        })
+                    );
+                    coil.rotation.y = Math.PI / 2;
+                    coil.position.x = rx;
+                    group.add(coil);
+                });
+
+                // Cilindro de nitrogênio superior
+                const tank = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.14, 0.14, 0.5, 16),
+                    new THREE.MeshStandardMaterial({
+                        color: 0x7dd3fc,
+                        emissive: 0x0ea5e9,
+                        emissiveIntensity: 0.5,
+                        transparent: true,
+                        opacity: 0.88
+                    })
+                );
+                tank.rotation.z = Math.PI / 2;
+                tank.position.set(0.28, 0.25, 0);
+                group.add(tank);
+
+                // Bocal emissor
+                const nozzle = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.28, 18), copperMat);
+                nozzle.rotation.z = -Math.PI / 2;
+                nozzle.position.x = 0.92;
+                group.add(nozzle);
+            } else if (weaponType === 'fart_gun') {
+                const body = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.55, 16), gunMat);
+                body.rotation.z = Math.PI / 2;
+                body.position.x = 0.18;
+                group.add(body);
+
+                // Megafone cônico amarelo
+                const horn = new THREE.Mesh(new THREE.ConeGeometry(0.36, 0.78, 24, 1, true), accentMat);
+                horn.material.side = THREE.DoubleSide;
+                horn.rotation.z = -Math.PI / 2;
+                horn.position.x = 0.65;
+                group.add(horn);
+
+                // Núcleo verde tóxico interno
+                const core = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.16, 14, 14),
+                    new THREE.MeshStandardMaterial({ color: 0x84cc16, emissive: 0x65a30d, emissiveIntensity: 0.9 })
+                );
+                core.position.x = 0.52;
+                group.add(core);
+
+                // Manômetro lateral
+                const gauge = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.06, 16), copperMat);
+                gauge.rotation.x = Math.PI / 2;
+                gauge.position.set(0.22, 0.16, 0.16);
+                group.add(gauge);
+            } else if (weaponType === 'rocket_launcher' || weaponType === 'px41_cannon') {
+                const isPX = weaponType === 'px41_cannon';
+                const tubeMat = isPX
+                    ? new THREE.MeshStandardMaterial({ color: 0x4c1d95, metalness: 0.8, roughness: 0.2 })
+                    : gunMat;
+
+                const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.23, 0.23, 1.25, 20), tubeMat);
+                tube.rotation.z = Math.PI / 2;
+                tube.position.x = 0.35;
+                group.add(tube);
+
+                // Faixas de reforço
+                [-0.05, 0.45, 0.85].forEach(bx => {
+                    const band = new THREE.Mesh(new THREE.CylinderGeometry(0.255, 0.255, 0.1, 20), isPX ? copperMat : accentMat);
+                    band.rotation.z = Math.PI / 2;
+                    band.position.x = bx;
+                    group.add(band);
+                });
+
+                // Mira óptica lateral
+                const scope = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.36, 14), darkMetalMat);
+                scope.rotation.z = Math.PI / 2;
+                scope.position.set(0.32, 0.28, 0.12);
+                group.add(scope);
+
+                // Ogiva na ponta
+                const tipColor = isPX ? 0xd946ef : 0xfacc15;
+                const tip = new THREE.Mesh(
+                    new THREE.ConeGeometry(0.2, 0.36, 16),
+                    new THREE.MeshStandardMaterial({ color: tipColor, emissive: tipColor, emissiveIntensity: 0.55 })
+                );
+                tip.rotation.z = -Math.PI / 2;
+                tip.position.x = 1.05;
+                group.add(tip);
+            } else {
+                const launcher = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.21, 0.9, 18), accentMat);
+                launcher.rotation.z = Math.PI / 2;
+                launcher.position.x = 0.32;
+                group.add(launcher);
+
+                const muzzle = new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.035, 12, 24), darkMetalMat);
+                muzzle.rotation.y = Math.PI / 2;
+                muzzle.position.x = 0.77;
+                group.add(muzzle);
+
+                const energyOrb = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.14, 14, 14),
+                    new THREE.MeshStandardMaterial({ color: 0x22d3ee, emissive: 0x06b6d4, emissiveIntensity: 0.9 })
+                );
+                energyOrb.position.x = 0.82;
+                group.add(energyOrb);
+            }
+
+            group.traverse(obj => {
+                if (obj.isMesh) obj.castShadow = true;
+            });
+
+            return group;
+        }
+
+        function createMinion3D(template, side) {
+            const root = new THREE.Group();
+            const baseX = side === 'left' ? -3.1 : 3.1;
+            root.position.set(baseX, 0, 0);
+            root.rotation.y = side === 'left' ? Math.PI * 0.28 : -Math.PI * 0.28;
+
+            const hScale = template.heightScale || 1;
+            const wScale = template.widthScale || 1;
+
+            const bodyPivot = new THREE.Group();
+            bodyPivot.scale.set(wScale, hScale, wScale);
+            root.add(bodyPivot);
+
+            // Material da pele com acabamento suave e sub-brilho orgânico
+            const skinMat = new THREE.MeshStandardMaterial({
+                color: template.bodyColor,
+                roughness: 0.36,
+                metalness: 0.05
+            });
+
+            // Corpo cilíndrico + cabeça e base arredondadas (cápsula anatômica)
+            const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.66, 0.66, 1.32, 32), skinMat);
+            torso.position.y = 1.36;
+            torso.castShadow = true;
+            bodyPivot.add(torso);
+
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.66, 32, 24), skinMat);
+            head.position.y = 2.02;
+            head.castShadow = true;
+            bodyPivot.add(head);
+
+            const bottomCap = new THREE.Mesh(new THREE.SphereGeometry(0.65, 28, 18), skinMat);
+            bottomCap.position.y = 0.74;
+            bodyPivot.add(bottomCap);
+
+            // Macacão jeans com textura procedural, bolsos, alças e botões
+            const denimTex = createDenimTexture(template.overallColor);
+            const overallMat = new THREE.MeshStandardMaterial({
+                map: denimTex,
+                color: 0xffffff,
+                roughness: 0.62,
+                metalness: 0.06
+            });
+
+            const pants = new THREE.Mesh(new THREE.CylinderGeometry(0.685, 0.66, 0.72, 32), overallMat);
+            pants.position.y = 0.96;
+            pants.castShadow = true;
+            bodyPivot.add(pants);
+
+            const pantsBottom = new THREE.Mesh(new THREE.SphereGeometry(0.66, 28, 16), overallMat);
+            pantsBottom.position.y = 0.66;
+            bodyPivot.add(pantsBottom);
+
+            // Peitoral frontal e traseiro
+            const bibFront = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.56, 0.24), overallMat);
+            bibFront.position.set(0, 1.48, 0.58);
+            bibFront.castShadow = true;
+            bodyPivot.add(bibFront);
+
+            const bibBack = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.48, 0.2), overallMat);
+            bibBack.position.set(0, 1.44, -0.58);
+            bodyPivot.add(bibBack);
+
+            // Bolso frontal com emblema "G" do Gru
+            const pocket = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.3, 0.08), overallMat);
+            pocket.position.set(0, 1.42, 0.7);
+            bodyPivot.add(pocket);
+
+            const emblem = new THREE.Mesh(
+                new THREE.CircleGeometry(0.13, 20),
+                new THREE.MeshStandardMaterial({ map: createGruEmblemTexture(), roughness: 0.35 })
+            );
+            emblem.position.set(0, 1.42, 0.745);
+            bodyPivot.add(emblem);
+
+            // Alças do macacão + botões metálicos
+            const buttonMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.85, roughness: 0.25 });
+            [-0.31, 0.31].forEach(sx => {
+                const strapGeo = new THREE.TorusGeometry(0.68, 0.055, 10, 28, Math.PI * 0.72);
+                const strapOverall = new THREE.Mesh(strapGeo, overallMat);
+                strapOverall.rotation.y = Math.PI / 2;
+                strapOverall.rotation.z = Math.PI * 0.14;
+                strapOverall.position.set(sx * 1.15, 1.54, 0);
+                bodyPivot.add(strapOverall);
+
+                const btn = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.04, 16), buttonMat);
+                btn.rotation.x = Math.PI / 2;
+                btn.position.set(sx, 1.66, 0.7);
+                bodyPivot.add(btn);
+            });
+
+            // Faixa dos óculos com fivelas laterais
+            const strapMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.75 });
+            const strap = new THREE.Mesh(new THREE.CylinderGeometry(0.685, 0.685, 0.17, 32), strapMat);
+            strap.position.y = 1.98;
+            bodyPivot.add(strap);
+
+            [-0.68, 0.68].forEach(bx => {
+                const buckle = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.21, 0.18), buttonMat);
+                buckle.position.set(bx, 1.98, 0);
+                bodyPivot.add(buckle);
+            });
+
+            // Óculos 3D detalhados (aro duplo, parafusos, pálpebras e reflexo nos olhos)
+            const goggleMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.9, roughness: 0.16 });
+            const eyeWhiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 });
+            const pupilMat = new THREE.MeshBasicMaterial({ color: 0x090d16 });
+            const glintMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+            const eyeOffsets = template.eyes === 1 ? [0] : [-0.24, 0.24];
+            const eyelids = [];
+            const pupils = [];
+            eyeOffsets.forEach((ox, idx) => {
+                // Aro externo e cilindro do óculos
+                const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.14, 28, 1, true), goggleMat);
+                barrel.rotation.x = Math.PI / 2;
+                barrel.position.set(ox, 1.98, 0.64);
+                bodyPivot.add(barrel);
+
+                const frame = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.045, 16, 32), goggleMat);
+                frame.position.set(ox, 1.98, 0.7);
+                bodyPivot.add(frame);
+
+                // Globo ocular
+                const eyeball = new THREE.Mesh(new THREE.SphereGeometry(0.19, 22, 22), eyeWhiteMat);
+                eyeball.position.set(ox, 1.98, 0.58);
+                bodyPivot.add(eyeball);
+
+                // Pálpebra superior expressiva
+                const eyelid = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.196, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.34),
+                    skinMat
+                );
+                eyelid.position.set(ox, 1.98, 0.58);
+                eyelid.rotation.x = template.id === 'evil_minion' ? 0.35 : 0.12;
+                bodyPivot.add(eyelid);
+                eyelids.push(eyelid);
+
+                // Íris colorida
+                const irisColor = (template.id === 'bob' && idx === 1)
+                    ? 0x16a34a
+                    : (template.id === 'evil_minion' ? 0xc026d3 : 0x78350f);
+                const iris = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.088, 16, 16),
+                    new THREE.MeshStandardMaterial({ color: irisColor, roughness: 0.25 })
+                );
+                iris.position.set(ox, 1.97, 0.74);
+                bodyPivot.add(iris);
+
+                // Pupila + ponto de brilho
+                const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.044, 12, 12), pupilMat);
+                pupil.position.set(ox, 1.97, 0.81);
+                bodyPivot.add(pupil);
+                pupils.push(pupil);
+
+                const glint = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 8), glintMat);
+                glint.position.set(ox + 0.03, 2.0, 0.825);
+                bodyPivot.add(glint);
+            });
+
+            // Boca 3D bem visível e articulada com expressões dinâmicas (sorriso, dor, ataque, choque)
+            const mouthGroup = new THREE.Group();
+            mouthGroup.position.set(0, 1.66, 0.655);
+            bodyPivot.add(mouthGroup);
+
+            // Contorno / lábio da boca
+            const lipMat = new THREE.MeshStandardMaterial({
+                color: template.id === 'evil_minion' ? 0x581c87 : 0xd97706,
+                roughness: 0.45
+            });
+            const lipRing = new THREE.Mesh(new THREE.TorusGeometry(0.145, 0.026, 12, 24), lipMat);
+            lipRing.scale.set(1.3, 0.62, 0.65);
+            mouthGroup.add(lipRing);
+
+            // Interior escuro da boca
+            const mouthCavity = new THREE.Mesh(
+                new THREE.CircleGeometry(0.14, 24),
+                new THREE.MeshBasicMaterial({ color: 0x3b0712, side: THREE.DoubleSide })
+            );
+            mouthCavity.scale.set(1.28, 0.6, 1);
+            mouthCavity.position.z = 0.004;
+            mouthGroup.add(mouthCavity);
+
+            // Língua 3D
+            const tongue = new THREE.Mesh(
+                new THREE.SphereGeometry(0.075, 14, 12),
+                new THREE.MeshStandardMaterial({ color: 0xf43f5e, roughness: 0.35 })
+            );
+            tongue.scale.set(1.15, 0.45, 0.45);
+            tongue.position.set(0, -0.042, 0.014);
+            mouthGroup.add(tongue);
+
+            // Dentes superiores
+            const toothMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.2 });
+            if (template.id === 'evil_minion') {
+                [-0.1, -0.035, 0.035, 0.1].forEach(tx => {
+                    const fang = new THREE.Mesh(new THREE.ConeGeometry(0.028, 0.075, 8), toothMat);
+                    fang.rotation.x = Math.PI;
+                    fang.position.set(tx, 0.038, 0.018);
+                    mouthGroup.add(fang);
+                });
+            } else {
+                [-0.06, -0.02, 0.02, 0.06].forEach(tx => {
+                    const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.034, 0.034, 0.022), toothMat);
+                    tooth.position.set(tx, 0.048, 0.016);
+                    mouthGroup.add(tooth);
+                });
+            }
+
+            // Sobrancelhas expressivas acima dos óculos
+            const browMat = new THREE.MeshStandardMaterial({
+                color: template.id === 'evil_minion' ? 0x6b21a8 : 0x1e293b,
+                roughness: 0.5
+            });
+            const eyebrows = [];
+            const browPositions = template.eyes === 1 ? [-0.14, 0.14] : [-0.24, 0.24];
+            browPositions.forEach((bx, idx) => {
+                const brow = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.042, 0.06), browMat);
+                brow.position.set(bx, 2.24, 0.67);
+                const baseRotZ = template.id === 'evil_minion' ? (idx === 0 ? -0.28 : 0.28) : (idx === 0 ? 0.08 : -0.08);
+                brow.rotation.z = baseRotZ;
+                brow.userData.baseRotZ = baseRotZ;
+                bodyPivot.add(brow);
+                eyebrows.push(brow);
+            });
+
+            // Cabelo característico mais orgânico
+            const hairMat = new THREE.MeshStandardMaterial({
+                color: template.id === 'evil_minion' ? 0x9333ea : 0x111827,
+                roughness: 0.6
+            });
+            if (template.hairStyle !== 'bald') {
+                const count = template.hairStyle === 'wild' ? 13 : 6;
+                for (let i = 0; i < count; i++) {
+                    const height = template.hairStyle === 'wild' ? 0.52 : 0.36;
+                    const strand = new THREE.Mesh(new THREE.ConeGeometry(0.024, height, 8), hairMat);
+                    const spread = (i - (count - 1) / 2) * (template.hairStyle === 'wild' ? 0.11 : 0.12);
+                    strand.position.set(spread, 2.74, (i % 2 === 0 ? 0.05 : -0.05));
+                    strand.rotation.z = -spread * 1.15;
+                    strand.rotation.x = (i % 2 === 0 ? 0.15 : -0.15);
+                    bodyPivot.add(strand);
+                }
+            }
+
+            // Pernas & Botas detalhadas com solado e biqueira
+            const bootMat = new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.42, metalness: 0.15 });
+            const soleMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
+            [-0.25, 0.25].forEach(lx => {
+                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.145, 0.135, 0.44, 16), overallMat);
+                leg.position.set(lx, 0.44, 0);
+                leg.castShadow = true;
+                bodyPivot.add(leg);
+
+                const bootCuff = new THREE.Mesh(new THREE.CylinderGeometry(0.155, 0.155, 0.1, 16), bootMat);
+                bootCuff.position.set(lx, 0.27, 0);
+                bodyPivot.add(bootCuff);
+
+                const bootBody = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.18, 0.36), bootMat);
+                bootBody.position.set(lx, 0.16, 0.04);
+                bootBody.castShadow = true;
+                bodyPivot.add(bootBody);
+
+                const bootToe = new THREE.Mesh(new THREE.SphereGeometry(0.145, 16, 12), bootMat);
+                bootToe.scale.set(0.96, 0.65, 1.15);
+                bootToe.position.set(lx, 0.15, 0.22);
+                bodyPivot.add(bootToe);
+
+                const sole = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.05, 0.48), soleMat);
+                sole.position.set(lx, 0.04, 0.08);
+                bodyPivot.add(sole);
+            });
+
+            // Braços articulados com ombros, punhos e luvas de 3 dedos
+            function buildArm(isRight) {
+                const armGroup = new THREE.Group();
+                armGroup.position.set(isRight ? 0.72 : -0.72, 1.54, 0);
+
+                const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 14), skinMat);
+                armGroup.add(shoulder);
+
+                const upperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.105, 0.66, 16), skinMat);
+                upperArm.position.y = -0.32;
+                upperArm.castShadow = true;
+                armGroup.add(upperArm);
+
+                const cuff = new THREE.Mesh(new THREE.TorusGeometry(0.125, 0.032, 10, 20), bootMat);
+                cuff.rotation.x = Math.PI / 2;
+                cuff.position.y = -0.62;
+                armGroup.add(cuff);
+
+                const glovePalm = new THREE.Mesh(new THREE.SphereGeometry(0.155, 16, 16), bootMat);
+                glovePalm.position.y = -0.72;
+                glovePalm.castShadow = true;
+                armGroup.add(glovePalm);
+
+                [-0.07, 0, 0.07].forEach((fx, fi) => {
+                    const finger = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 10), bootMat);
+                    finger.scale.set(0.9, 1.5, 0.9);
+                    finger.position.set(fx, -0.84 + (fi === 1 ? -0.02 : 0), 0.03);
+                    armGroup.add(finger);
+                });
+
+                return armGroup;
+            }
+
+            const leftArmGroup = buildArm(false);
+            bodyPivot.add(leftArmGroup);
+
+            const rightArmGroup = buildArm(true);
+
+            // Arma 3D acoplada na mão direita
+            const weapon = buildWeapon3D(template.weaponType);
+            weapon.position.set(0.05, -0.7, 0.25);
+            weapon.rotation.y = -Math.PI / 2;
+            rightArmGroup.add(weapon);
+            bodyPivot.add(rightArmGroup);
+
+            // Cubo de gelo (invisível até ser congelado)
+            const iceBlock = new THREE.Mesh(
+                new THREE.BoxGeometry(1.78, 2.82, 1.78),
+                new THREE.MeshStandardMaterial({
+                    color: 0x7dd3fc,
+                    emissive: 0x0284c7,
+                    emissiveIntensity: 0.2,
+                    transparent: true,
+                    opacity: 0.48,
+                    roughness: 0.08,
+                    metalness: 0.25
+                })
+            );
+            iceBlock.position.y = 1.48;
+            iceBlock.visible = false;
+            root.add(iceBlock);
+
+            // Manchas de sujeira / fuligem de combate
+            const dirtSpots = [];
+            const dirtMat = new THREE.MeshBasicMaterial({ color: 0x1c1917, transparent: true, opacity: 0.75 });
+            for (let d = 0; d < 6; d++) {
+                const spot = new THREE.Mesh(new THREE.SphereGeometry(0.12 + (d % 3) * 0.04, 10, 10), dirtMat);
+                const ang = (d / 6) * Math.PI * 2;
+                spot.position.set(Math.cos(ang) * 0.65, 1.15 + (d % 4) * 0.28, Math.sin(ang) * 0.65);
+                spot.scale.z = 0.35;
+                spot.visible = false;
+                bodyPivot.add(spot);
+                dirtSpots.push(spot);
+            }
+
+            return {
+                root,
+                bodyPivot,
+                leftArmGroup,
+                rightArmGroup,
+                mouthGroup,
+                lipRing,
+                mouthCavity,
+                tongue,
+                eyelids,
+                pupils,
+                eyebrows,
+                expression: 'idle',
+                expressionTimer: 0,
+                hurtTimer: 0,
+                skinMat,
+                baseSkinColor: template.bodyColor,
+                iceBlock,
+                dirtSpots,
+                baseX,
+                phase: side === 'left' ? 0 : Math.PI
+            };
+        }
+
+        function setMinionExpression(rig, state, duration = 1.1) {
+            if (!rig) return;
+            rig.expression = state;
+            rig.expressionTimer = duration;
+            if (state === 'hurt') {
+                rig.hurtTimer = duration;
+            }
+        }
+
+        function spawnProjectile(startPos, endPos, colorHex, onHit) {
+            const projGeo = new THREE.SphereGeometry(0.22, 16, 16);
+            const projMat = new THREE.MeshStandardMaterial({
+                color: colorHex,
+                emissive: colorHex,
+                emissiveIntensity: 1.2
+            });
+            const mesh = new THREE.Mesh(projGeo, projMat);
+            mesh.position.copy(startPos);
+            scene.add(mesh);
+
+            activeProjectiles.push({
+                mesh,
+                start: startPos.clone(),
+                end: endPos.clone(),
+                progress: 0,
+                onHit
+            });
+        }
+
+        function spawnImpactParticles(origin, colorHex, count = 20) {
+            const geo = new THREE.SphereGeometry(0.11, 8, 8);
+            const mat = new THREE.MeshBasicMaterial({ color: colorHex });
+            for (let i = 0; i < count; i++) {
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.position.copy(origin);
+                scene.add(mesh);
+                activeParticles.push({
+                    mesh,
+                    vel: new THREE.Vector3(
+                        (Math.random() - 0.5) * 9,
+                        Math.random() * 6 + 2,
+                        (Math.random() - 0.5) * 9
+                    ),
+                    life: 0.55 + Math.random() * 0.35
+                });
+            }
+        }
+
+        function triggerCameraShake(intensity = 0.28, duration = 0.3) {
+            cameraShakeIntensity = intensity;
+            cameraShakeTime = duration;
+        }
+
+        function onWindowResize() {
+            if (!camera || !renderer) return;
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const dt = Math.min(clock.getDelta(), 0.05);
+            const elapsed = clock.getElapsedTime();
+
+            // Animação idle e expressões faciais dinâmicas dos Minions
+            [p1Rig, p2Rig].forEach(rig => {
+                if (!rig || !rig.root.visible) return;
+
+                if (rig.expressionTimer > 0) {
+                    rig.expressionTimer -= dt;
+                    if (rig.expressionTimer <= 0) {
+                        rig.expression = 'idle';
+                    }
+                }
+
+                // Tremor e recuo quando toma dano
+                if (rig.hurtTimer > 0) {
+                    rig.hurtTimer -= dt;
+                    const recoilDir = rig.baseX < 0 ? -1 : 1;
+                    rig.root.position.x = rig.baseX + recoilDir * Math.sin(rig.hurtTimer * 28) * 0.22;
+                    rig.bodyPivot.rotation.x = -0.22 * Math.min(1, rig.hurtTimer * 2);
+                } else {
+                    rig.root.position.x = THREE.MathUtils.lerp(rig.root.position.x, rig.baseX, 0.18);
+                    rig.bodyPivot.rotation.x = THREE.MathUtils.lerp(rig.bodyPivot.rotation.x, 0, 0.18);
+                }
+
+                rig.bodyPivot.position.y = Math.abs(Math.sin(elapsed * 3.2 + rig.phase)) * 0.08;
+                rig.bodyPivot.rotation.z = Math.sin(elapsed * 2.1 + rig.phase) * 0.03;
+
+                // Expressão facial (boca, sobrancelhas, pálpebras e pupilas)
+                if (rig.mouthGroup) {
+                    const expr = rig.iceBlock && rig.iceBlock.visible ? 'frozen' : rig.expression;
+                    let targetMouthScale = new THREE.Vector3(1, 1, 1);
+                    let targetMouthRotZ = 0;
+                    let targetLidRotX = 0.12;
+                    let targetPupilScale = 1;
+                    let browTilt = 0;
+
+                    if (expr === 'hurt') {
+                        const wobble = 1 + Math.sin(elapsed * 42) * 0.12;
+                        targetMouthScale.set(0.85 * wobble, 1.85 * wobble, 1);
+                        targetMouthRotZ = Math.sin(elapsed * 30) * 0.12;
+                        targetLidRotX = -0.35;
+                        targetPupilScale = 0.65;
+                        browTilt = 0.35;
+                    } else if (expr === 'attack') {
+                        targetMouthScale.set(1.25, 1.3, 1);
+                        targetLidRotX = 0.38;
+                        browTilt = -0.32;
+                    } else if (expr === 'happy') {
+                        targetMouthScale.set(1.35, 1.15, 1);
+                        targetLidRotX = -0.15;
+                        browTilt = 0.15;
+                    } else if (expr === 'frozen') {
+                        targetMouthScale.set(1.15, 0.55, 1);
+                        targetMouthRotZ = Math.sin(elapsed * 55) * 0.15;
+                        targetLidRotX = -0.2;
+                    } else {
+                        const breath = 1 + Math.sin(elapsed * 3.2 + rig.phase) * 0.08;
+                        targetMouthScale.set(1, breath, 1);
+                    }
+
+                    rig.mouthGroup.scale.lerp(targetMouthScale, 0.25);
+                    rig.mouthGroup.rotation.z = THREE.MathUtils.lerp(rig.mouthGroup.rotation.z, targetMouthRotZ, 0.25);
+
+                    rig.eyelids.forEach(lid => {
+                        lid.rotation.x = THREE.MathUtils.lerp(lid.rotation.x, targetLidRotX, 0.22);
+                    });
+                    rig.pupils.forEach(p => {
+                        p.scale.lerp(new THREE.Vector3(targetPupilScale, targetPupilScale, targetPupilScale), 0.25);
+                    });
+                    rig.eyebrows.forEach((brow, idx) => {
+                        const dir = idx === 0 ? 1 : -1;
+                        const desiredZ = brow.userData.baseRotZ + dir * browTilt;
+                        brow.rotation.z = THREE.MathUtils.lerp(brow.rotation.z, desiredZ, 0.25);
+                    });
+                }
+            });
+
+            // Projéteis em voo
+            for (let i = activeProjectiles.length - 1; i >= 0; i--) {
+                const p = activeProjectiles[i];
+                p.progress += dt * 3.4;
+                const t = Math.min(1, p.progress);
+                p.mesh.position.lerpVectors(p.start, p.end, t);
+                p.mesh.position.y += Math.sin(t * Math.PI) * 0.85;
+                if (t >= 1) {
+                    scene.remove(p.mesh);
+                    activeProjectiles.splice(i, 1);
+                    if (p.onHit) p.onHit();
+                }
+            }
+
+            // Partículas de impacto
+            for (let i = activeParticles.length - 1; i >= 0; i--) {
+                const pt = activeParticles[i];
+                pt.life -= dt;
+                pt.vel.y -= 12 * dt;
+                pt.mesh.position.addScaledVector(pt.vel, dt);
+                pt.mesh.scale.setScalar(Math.max(0.01, pt.life));
+                if (pt.life <= 0) {
+                    scene.remove(pt.mesh);
+                    activeParticles.splice(i, 1);
+                }
+            }
+
+            // Banana gigante arremessada em arco pela arena
+            if (giantBananaThrow) {
+                giantBananaThrow.progress += dt * 1.45;
+                const t = Math.min(1, giantBananaThrow.progress);
+                giantBananaThrow.mesh.position.lerpVectors(giantBananaThrow.start, giantBananaThrow.end, t);
+                giantBananaThrow.mesh.position.y += Math.sin(t * Math.PI) * 2.6;
+                giantBananaThrow.mesh.rotation.z -= dt * 14;
+                giantBananaThrow.mesh.rotation.y += dt * 6;
+                if (t >= 1) {
+                    const done = giantBananaThrow.onImpact;
+                    scene.remove(giantBananaThrow.mesh);
+                    giantBananaThrow = null;
+                    if (done) done();
+                }
+            }
+
+            // Ondas de choque douradas no chão
+            for (let i = shockwaveRings.length - 1; i >= 0; i--) {
+                const sw = shockwaveRings[i];
+                sw.life -= dt * 1.4;
+                const s = 1 + (1 - Math.max(0, sw.life)) * 6.5;
+                sw.mesh.scale.set(s, s, 1);
+                sw.mesh.material.opacity = Math.max(0, sw.life);
+                if (sw.life <= 0) {
+                    scene.remove(sw.mesh);
+                    shockwaveRings.splice(i, 1);
+                }
+            }
+
+            // Mini-bananas quicando e girando pelo chão após o Fatality
+            for (let i = miniBananas.length - 1; i >= 0; i--) {
+                const mb = miniBananas[i];
+                mb.life -= dt;
+                mb.vel.y -= 16 * dt;
+                mb.mesh.position.addScaledVector(mb.vel, dt);
+                mb.mesh.rotation.x += mb.rotVel.x * dt;
+                mb.mesh.rotation.y += mb.rotVel.y * dt;
+                mb.mesh.rotation.z += mb.rotVel.z * dt;
+
+                if (mb.mesh.position.y < 0.14) {
+                    mb.mesh.position.y = 0.14;
+                    mb.vel.y = Math.abs(mb.vel.y) * 0.58;
+                    mb.vel.x *= 0.84;
+                    mb.vel.z *= 0.84;
+                    mb.rotVel.multiplyScalar(0.8);
+                }
+
+                if (mb.life < 0.8) {
+                    mb.mesh.scale.setScalar(Math.max(0.01, mb.life / 0.8));
+                }
+                if (mb.life <= 0) {
+                    scene.remove(mb.mesh);
+                    miniBananas.splice(i, 1);
+                }
+            }
+
+            // Tremor de câmera
+            if (cameraShakeTime > 0) {
+                cameraShakeTime -= dt;
+                camera.position.set(
+                    baseCameraPos.x + (Math.random() - 0.5) * cameraShakeIntensity,
+                    baseCameraPos.y + (Math.random() - 0.5) * cameraShakeIntensity,
+                    baseCameraPos.z
+                );
+            } else {
+                camera.position.lerp(baseCameraPos, 0.12);
+            }
+            camera.lookAt(baseCameraLookAt);
+
+            renderer.render(scene, camera);
+        }
+
+        /* ==========================================================================
+           5. NAVEGAÇÃO ENTRE TELAS & SELEÇÃO DE PERSONAGENS
+           ========================================================================== */
+        function showScreen(screenId) {
+            ['screen-mode', 'screen-story', 'screen-char-select', 'screen-combat'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.add('hidden');
+            });
+            const target = document.getElementById(screenId);
+            if (target) target.classList.remove('hidden');
+
+            const isCombat = screenId === 'screen-combat';
+            document.getElementById('timeline-hud').classList.toggle('hidden', !isCombat);
+            document.getElementById('restart-midgame-btn').classList.toggle('hidden', !isCombat);
+        }
+
+        function selectGameMode(mode) {
+            sound.init();
+            sound.playHit();
+            gameState.mode = mode;
+            gameState.selectStep = 1;
+            gameState.activeStoryChapter = null;
+
+            const title = document.getElementById('select-title-indicator');
+            title.textContent = mode === 'pvp'
+                ? 'Jogador 1: Escolha seu Minion'
+                : 'Escolha seu Minion para a Batalha';
+
+            renderCharacterGrid();
+            showScreen('screen-char-select');
+        }
+
+        function renderCharacterGrid() {
+            const grid = document.getElementById('minions-grid');
+            grid.innerHTML = '';
+
+            MINIONS_DB.forEach(m => {
+                const isUnlocked = m.unlockedByDefault || saveData.unlockedIds.includes(m.id);
+                const card = document.createElement('div');
+                card.className = `glass-card rounded-2xl p-4 flex flex-col justify-between ${isUnlocked ? 'cursor-pointer' : 'opacity-65'}`;
+
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-3xl">${m.emoji}</span>
+                            <span class="text-[10px] font-tech px-2.5 py-0.5 rounded-full bg-slate-900/90 text-cyan-300 border border-cyan-500/30">
+                                ${isUnlocked ? m.role : '🔒 BLOQUEADO'}
+                            </span>
+                        </div>
+                        <h3 class="text-xl font-heading text-yellow-300">${m.name}</h3>
+                        <p class="text-[11px] text-cyan-200 font-bold mb-1">🔫 ${m.weaponName}</p>
+                        <p class="text-xs text-slate-300 leading-relaxed mb-3">${m.desc}</p>
+                    </div>
+                    <div>
+                        <div class="grid grid-cols-4 gap-1 text-center text-[10px] font-tech bg-slate-950/80 p-2 rounded-xl mb-3">
+                            <div><span class="text-slate-400 block">HP</span><b class="text-emerald-400">${m.stats.hp}</b></div>
+                            <div><span class="text-slate-400 block">ATK</span><b class="text-red-400">${m.stats.atk}</b></div>
+                            <div><span class="text-slate-400 block">DEF</span><b class="text-cyan-300">${m.stats.def}</b></div>
+                            <div><span class="text-slate-400 block">SPD</span><b class="text-yellow-300">${m.stats.spd}</b></div>
+                        </div>
+                        <button type="button" ${isUnlocked ? '' : 'disabled'} class="w-full py-2 rounded-xl font-heading text-sm ${isUnlocked ? 'bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-bold' : 'bg-slate-800 text-slate-400'}">
+                            ${isUnlocked ? '✔ Selecionar' : 'Vença o Modo História'}
+                        </button>
+                    </div>
+                `;
+
+                if (isUnlocked) {
+                    card.onclick = () => handleCharacterSelected(m.id);
+                }
+                grid.appendChild(card);
+            });
+        }
+
+        function handleCharacterSelected(minionId) {
+            sound.playHit();
+            if (gameState.mode === 'story-hero') {
+                saveData.storyHeroId = minionId;
+                persistSaveData();
+                gameState.mode = 'story';
+                openStoryCampaign();
+                return;
+            }
+
+            if (gameState.mode === 'pvp') {
+                if (gameState.selectStep === 1) {
+                    gameState.p1TemplateId = minionId;
+                    gameState.selectStep = 2;
+                    document.getElementById('select-title-indicator').textContent = 'Jogador 2: Escolha seu Minion';
+                    return;
+                } else {
+                    gameState.p2TemplateId = minionId;
+                    startMatch();
+                    return;
+                }
+            }
+
+            // Modo PvE
+            gameState.p1TemplateId = minionId;
+            const pool = MINIONS_DB.filter(m => m.id !== minionId);
+            const randomEnemy = pool[Math.floor(Math.random() * pool.length)];
+            gameState.p2TemplateId = randomEnemy.id;
+            startMatch();
+        }
+
+        function scrollCharacterSelection(dir) {
+            const container = document.getElementById('screen-char-select');
+            if (container) {
+                container.scrollBy({ top: dir === 'down' ? 280 : -280, behavior: 'smooth' });
+            }
+        }
+
+        /* ==========================================================================
+           6. MODO HISTÓRIA: A OPERAÇÃO BANANA
+           ========================================================================== */
+        function openStoryCampaign() {
+            sound.init();
+            gameState.mode = 'story';
+            renderStoryMap();
+            showScreen('screen-story');
+        }
+
+        function renderStoryMap() {
+            const list = document.getElementById('story-chapter-list');
+            list.innerHTML = '';
+
+            STORY_CHAPTERS.forEach(ch => {
+                const completed = saveData.completedChapters.includes(ch.id);
+                const unlocked = ch.id === 1 || saveData.completedChapters.includes(ch.id - 1);
+                const selected = saveData.selectedChapter === ch.id;
+
+                const card = document.createElement('div');
+                card.className = `rounded-2xl p-4 border-2 transition ${
+                    selected
+                        ? 'bg-yellow-400/15 border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.25)]'
+                        : unlocked
+                            ? 'bg-slate-900/80 border-slate-700 hover:border-cyan-400 cursor-pointer'
+                            : 'bg-slate-950/60 border-slate-800 opacity-50'
+                }`;
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-tech text-[10px] uppercase ${completed ? 'text-emerald-400' : unlocked ? 'text-cyan-300' : 'text-slate-500'}">
+                            ${completed ? '✅ CONCLUÍDO' : unlocked ? '▶ DISPONÍVEL' : '🔒 BLOQUEADO'}
+                        </span>
+                        <span class="text-xs font-bold text-yellow-300">${ch.rewardText}</span>
+                    </div>
+                    <h3 class="text-lg font-heading text-white">${ch.title}</h3>
+                    <p class="text-xs text-slate-300 mt-0.5">${ch.subtitle}</p>
+                `;
+
+                if (unlocked) {
+                    card.onclick = () => {
+                        saveData.selectedChapter = ch.id;
+                        persistSaveData();
+                        renderStoryMap();
+                    };
+                }
+                list.appendChild(card);
+            });
+
+            const hero = MINIONS_DB.find(m => m.id === saveData.storyHeroId) || MINIONS_DB[0];
+            const summary = document.getElementById('story-progress-summary');
+            summary.innerHTML = `
+                <div class="flex flex-wrap justify-between items-center gap-2">
+                    <div>
+                        <span class="text-slate-400 text-xs block">Minion da Campanha:</span>
+                        <b class="text-yellow-300 font-heading text-lg">${hero.emoji} ${hero.name}</b>
+                    </div>
+                    <div class="text-right font-tech text-xs text-cyan-300">
+                        Bônus Permanentes: <b>+${saveData.bonus.hp} HP</b> | <b>+${saveData.bonus.atk} ATK</b> | <b>+${saveData.bonus.def} DEF</b>
+                    </div>
+                </div>
+            `;
+        }
+
+        function changeStoryHero() {
+            gameState.mode = 'story-hero';
+            document.getElementById('select-title-indicator').textContent = 'Escolha seu Herói para o Modo História';
+            renderCharacterGrid();
+            showScreen('screen-char-select');
+        }
+
+        function startStoryCampaign() {
+            const chapter = STORY_CHAPTERS.find(c => c.id === saveData.selectedChapter) || STORY_CHAPTERS[0];
+            gameState.activeStoryChapter = chapter;
+            gameState.p1TemplateId = saveData.storyHeroId || 'kevin';
+            gameState.p2TemplateId = chapter.enemyId;
+
+            playStoryDialogues(chapter.title, chapter.intro, 'intro');
+        }
+
+        function playStoryDialogues(title, lines, mode) {
+            gameState.dialogueTitle = title;
+            gameState.pendingDialogues = lines;
+            gameState.dialogueIndex = 0;
+            gameState.dialogueMode = mode;
+
+            const modal = document.getElementById('story-scene-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            updateStoryDialogueUI();
+        }
+
+        function updateStoryDialogueUI() {
+            const total = gameState.pendingDialogues.length;
+            const idx = gameState.dialogueIndex;
+            document.getElementById('story-scene-title').textContent = gameState.dialogueTitle;
+            document.getElementById('story-scene-text').textContent = gameState.pendingDialogues[idx] || '';
+            document.getElementById('story-scene-counter').textContent = `CENA ${idx + 1} / ${total}`;
+            document.getElementById('story-scene-next').textContent =
+                idx + 1 < total
+                    ? 'Próximo diálogo →'
+                    : (gameState.dialogueMode === 'intro' ? '⚔️ Iniciar Batalha!' : '🏆 Continuar');
+        }
+
+        function advanceStoryScene() {
+            sound.playHit();
+            gameState.dialogueIndex++;
+            if (gameState.dialogueIndex < gameState.pendingDialogues.length) {
+                updateStoryDialogueUI();
+                return;
+            }
+            const modal = document.getElementById('story-scene-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+
+            if (gameState.dialogueMode === 'intro') {
+                startMatch();
+            } else {
+                openStoryCampaign();
+            }
+        }
+
+        function storyContinueAfterVictory() {
+            document.getElementById('victory-modal').classList.add('hidden');
+            const ch = gameState.activeStoryChapter;
+            if (ch && ch.outro) {
+                playStoryDialogues(ch.title, ch.outro, 'outro');
+            } else {
+                openStoryCampaign();
+            }
+        }
+
+        /* ==========================================================================
+           7. CRIAÇÃO DOS COMBATENTES & INÍCIO DA PARTIDA
+           ========================================================================== */
+        function createFighterState(templateId, sideId, isAI, customBoost = null, nameOverride = null) {
+            const tpl = MINIONS_DB.find(m => m.id === templateId) || MINIONS_DB[0];
+            const bonus = customBoost || { hp: 0, atk: 0, def: 0 };
+
+            const maxHp = Math.max(60, tpl.stats.hp + (bonus.hp || 0));
+            return {
+                id: sideId,
+                templateId: tpl.id,
+                name: nameOverride || tpl.name,
+                emoji: tpl.emoji,
+                color: tpl.color,
+                isAI,
+                maxHp,
+                hp: maxHp,
+                atk: Math.max(8, tpl.stats.atk + (bonus.atk || 0)),
+                def: Math.max(4, tpl.stats.def + (bonus.def || 0)),
+                spd: tpl.stats.spd,
+                skills: tpl.skills,
+                bananaCharge: 0,
+                frozenTurns: 0,
+                stinkTurns: 0,
+                dirtLevel: 0
+            };
+        }
+
+        function startMatch() {
+            document.getElementById('victory-modal').classList.add('hidden');
+            document.getElementById('battle-log').innerHTML = '';
+            clearFatalityEffects();
+
+            // Limpar modelos anteriores
+            if (p1Rig) scene.remove(p1Rig.root);
+            if (p2Rig) scene.remove(p2Rig.root);
+
+            const isStory = gameState.mode === 'story' && gameState.activeStoryChapter;
+            const p1Bonus = isStory ? saveData.bonus : null;
+            const p2Bonus = isStory ? gameState.activeStoryChapter.enemyBoost : null;
+            const p2NameOverride = isStory ? gameState.activeStoryChapter.enemyNameOverride : null;
+
+            gameState.p1 = createFighterState(gameState.p1TemplateId, 'p1', false, p1Bonus);
+            gameState.p2 = createFighterState(gameState.p2TemplateId, 'p2', gameState.mode !== 'pvp', p2Bonus, p2NameOverride);
+
+            const p1Tpl = MINIONS_DB.find(m => m.id === gameState.p1.templateId);
+            const p2Tpl = MINIONS_DB.find(m => m.id === gameState.p2.templateId);
+
+            p1Rig = createMinion3D(p1Tpl, 'left');
+            p2Rig = createMinion3D(p2Tpl, 'right');
+            scene.add(p1Rig.root);
+            scene.add(p2Rig.root);
+
+            // Ordem de turno baseada em SPD
+            gameState.turnQueue = gameState.p1.spd >= gameState.p2.spd
+                ? [gameState.p1, gameState.p2]
+                : [gameState.p2, gameState.p1];
+            gameState.currentTurnIndex = 0;
+            gameState.isBusy = false;
+            gameState.isGameOver = false;
+
+            showScreen('screen-combat');
+            updateVisualWearAndStatus();
+            updateCombatHUD();
+            renderTimeline();
+
+            addLog(`⚔️ Batalha iniciada: <b class="text-yellow-300">${gameState.p1.name}</b> vs <b class="text-purple-300">${gameState.p2.name}</b>!`);
+            beginTurn();
+        }
+
+        function confirmRestartMatch() {
+            const modal = document.getElementById('restart-confirm-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeRestartModal() {
+            const modal = document.getElementById('restart-confirm-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function restartMatch() {
+            startMatch();
+        }
+
+        function chooseAnotherMinion() {
+            document.getElementById('victory-modal').classList.add('hidden');
+            clearFatalityEffects();
+            if (gameState.mode === 'story') {
+                openStoryCampaign();
+            } else {
+                selectGameMode(gameState.mode);
+            }
+        }
+
+        /* ==========================================================================
+           8. HUD, TIMELINE, DESGASTE VISUAL & LOG DE COMBATE
+           ========================================================================== */
+        function getActiveFighter() {
+            return gameState.turnQueue[gameState.currentTurnIndex];
+        }
+
+        function getOpponentFighter(fighter) {
+            return fighter.id === 'p1' ? gameState.p2 : gameState.p1;
+        }
+
+        function getRigForFighter(fighter) {
+            return fighter.id === 'p1' ? p1Rig : p2Rig;
+        }
+
+        function updateVisualWearAndStatus() {
+            [
+                { f: gameState.p1, rig: p1Rig },
+                { f: gameState.p2, rig: p2Rig }
+            ].forEach(({ f, rig }) => {
+                if (!f || !rig) return;
+
+                // Cubo de gelo se congelado
+                rig.iceBlock.visible = f.frozenTurns > 0;
+
+                // Cor da pele: verde fedido se com efeito stink, senão cor original
+                if (f.stinkTurns > 0) {
+                    rig.skinMat.color.setHex(0x84cc16);
+                } else {
+                    rig.skinMat.color.setHex(rig.baseSkinColor);
+                }
+
+                // Manchas de sujeira/fuligem conforme dirtLevel (0..3)
+                rig.dirtSpots.forEach((spot, idx) => {
+                    spot.visible = idx < f.dirtLevel * 2;
+                });
+            });
+        }
+
+        function renderStatusBadges(fighter, containerId) {
+            const el = document.getElementById(containerId);
+            if (!el) return;
+            const badges = [];
+            if (fighter.frozenTurns > 0) {
+                badges.push(`<span class="status-badge px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/25 text-cyan-200 border border-cyan-400">❄️ Congelado (${fighter.frozenTurns})</span>`);
+            }
+            if (fighter.stinkTurns > 0) {
+                badges.push(`<span class="status-badge px-2 py-0.5 rounded-full text-[10px] font-bold bg-lime-500/25 text-lime-200 border border-lime-400">💨 Fedido (${fighter.stinkTurns})</span>`);
+            }
+            if (fighter.dirtLevel > 0) {
+                badges.push(`<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-900/40 text-amber-200 border border-amber-600/50">💥 Desgaste Nv.${fighter.dirtLevel}</span>`);
+            }
+            el.innerHTML = badges.join('');
+        }
+
+        function renderTimeline() {
+            const container = document.getElementById('timeline-avatars');
+            if (!container) return;
+            container.innerHTML = gameState.turnQueue.map((f, idx) => {
+                const active = idx === gameState.currentTurnIndex;
+                return `<span class="px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                    active
+                        ? 'bg-yellow-400 text-slate-950 scale-105 shadow'
+                        : 'bg-slate-800 text-slate-300'
+                }">${f.emoji} ${f.name}</span>`;
+            }).join('');
+        }
+
+        function updateCombatHUD() {
+            const p1 = gameState.p1;
+            const p2 = gameState.p2;
+            if (!p1 || !p2) return;
+
+            document.getElementById('p1-hud-name').textContent = `${p1.emoji} ${p1.name}`;
+            document.getElementById('p1-hud-hp-text').textContent = `${p1.hp}/${p1.maxHp}`;
+            document.getElementById('p1-hud-hp-bar').style.width = `${(p1.hp / p1.maxHp) * 100}%`;
+            document.getElementById('p1-hud-atk').textContent = p1.atk;
+            document.getElementById('p1-hud-def').textContent = p1.def;
+            document.getElementById('p1-hud-spd').textContent = p1.spd;
+            renderStatusBadges(p1, 'p1-status-badges');
+
+            document.getElementById('p2-hud-name').textContent = `${p2.name} ${p2.emoji}`;
+            document.getElementById('p2-hud-hp-text').textContent = `${p2.hp}/${p2.maxHp}`;
+            document.getElementById('p2-hud-hp-bar').style.width = `${(p2.hp / p2.maxHp) * 100}%`;
+            document.getElementById('p2-hud-atk').textContent = p2.atk;
+            document.getElementById('p2-hud-def').textContent = p2.def;
+            document.getElementById('p2-hud-spd').textContent = p2.spd;
+            renderStatusBadges(p2, 'p2-status-badges');
+
+            const active = getActiveFighter();
+            const isAI = active.isAI;
+            document.getElementById('active-player-tag').textContent = isAI
+                ? `🤖 Turno da IA (${active.name})`
+                : `🎯 Turno de ${active.name}`;
+
+            // Barra de Fatality Banana Gigante
+            const charge = Math.min(100, active.bananaCharge || 0);
+            document.getElementById('banana-charge-text').textContent = `Carga ${charge}/100`;
+            document.getElementById('banana-charge-bar').style.width = `${charge}%`;
+
+            const stateLabel = document.getElementById('banana-charge-state');
+            if (charge >= 100 && !isAI && !gameState.isBusy && !gameState.isGameOver) {
+                stateLabel.innerHTML = `<button onclick="triggerBananaSpecial()" class="w-full mt-1 py-1.5 px-3 rounded-lg bg-gradient-to-r from-yellow-400 via-amber-300 to-lime-300 text-slate-950 font-heading text-xs font-extrabold tracking-wide shadow-lg animate-pulse cursor-pointer">🍌 USAR ESPECIAL: BANANA GIGANTE!</button>`;
+            } else if (charge >= 100) {
+                stateLabel.textContent = '🍌 ESPECIAL CARREGADO!';
+            } else {
+                stateLabel.textContent = 'Cause dano para carregar o especial!';
+            }
+
+            // Botões das 3 habilidades
+            const skillsBox = document.getElementById('skills-container');
+            skillsBox.innerHTML = '';
+            active.skills.forEach((sk, idx) => {
+                const disabled = isAI || gameState.isBusy || gameState.isGameOver;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.disabled = disabled;
+                btn.className = 'glass-btn p-2 rounded-xl text-left flex flex-col justify-between';
+                btn.innerHTML = `
+                    <div class="flex items-center justify-between gap-1">
+                        <span class="text-base">${sk.icon}</span>
+                        <span class="text-[10px] font-tech text-cyan-300 uppercase">${sk.type === 'heal_shield' ? 'SUPORTE' : 'ATAQUE'}</span>
+                    </div>
+                    <div class="font-heading text-xs sm:text-sm text-yellow-200 leading-tight mt-0.5">${sk.name}</div>
+                    <div class="text-[10px] text-slate-300 leading-snug mt-0.5">${sk.desc}</div>
+                `;
+                btn.onclick = () => executeSkill(idx);
+                skillsBox.appendChild(btn);
+            });
+
+            updateVisualWearAndStatus();
+            renderTimeline();
+        }
+
+        function addLog(htmlText) {
+            const log = document.getElementById('battle-log');
+            if (!log) return;
+            const entry = document.createElement('div');
+            entry.className = 'border-b border-slate-800/80 pb-1 text-slate-200';
+            entry.innerHTML = htmlText;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function toggleBattleLog() {
+            const panel = document.getElementById('battle-log-panel');
+            const btn = document.getElementById('battle-log-toggle');
+            const open = panel.classList.toggle('log-open');
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            btn.textContent = open ? '－ Log' : '＋ Log';
+        }
+
+        function showFloatingText(side, text, colorClass = 'text-yellow-300') {
+            const combatSec = document.getElementById('screen-combat');
+            if (!combatSec) return;
+            const el = document.createElement('div');
+            el.className = `floating-text text-xl sm:text-2xl ${colorClass}`;
+            el.textContent = text;
+            el.style.left = side === 'left' ? '26%' : '68%';
+            el.style.top = '38%';
+            combatSec.appendChild(el);
+            setTimeout(() => el.remove(), 1350);
+        }
+
+        /* ==========================================================================
+           9. MOTOR DE TURNOS, HABILIDADES E IA
+           ========================================================================== */
+        function beginTurn() {
+            if (gameState.isGameOver) return;
+            const active = getActiveFighter();
+            const side = active.id === 'p1' ? 'left' : 'right';
+
+            // Dano contínuo de fedor tóxico
+            if (active.stinkTurns > 0) {
+                const poisonDmg = Math.max(6, Math.round(active.maxHp * 0.06));
+                active.hp = Math.max(0, active.hp - poisonDmg);
+                active.stinkTurns--;
+                setMinionExpression(getRigForFighter(active), 'hurt', 0.9);
+                showFloatingText(side, `-${poisonDmg} 💨`, 'text-lime-400');
+                addLog(`💨 <b class="text-lime-300">${active.name}</b> sofreu <b>${poisonDmg}</b> de dano da nuvem tóxica!`);
+                updateCombatHUD();
+                if (checkVictoryCondition()) return;
+            }
+
+            // Verifica congelamento
+            if (active.frozenTurns > 0) {
+                active.frozenTurns--;
+                showFloatingText(side, '❄️ CONGELADO!', 'text-cyan-300');
+                addLog(`❄️ <b class="text-cyan-300">${active.name}</b> está congelado e perdeu este turno!`);
+                updateCombatHUD();
+                setTimeout(() => endTurn(), 1100);
+                return;
+            }
+
+            updateCombatHUD();
+
+            if (active.isAI) {
+                gameState.isBusy = true;
+                updateCombatHUD();
+                setTimeout(() => {
+                    if (active.bananaCharge >= 100) {
+                        triggerBananaSpecial();
+                    } else {
+                        const skillIdx = chooseAISkill(active);
+                        executeSkill(skillIdx, true);
+                    }
+                }, 900);
+            }
+        }
+
+        function chooseAISkill(ai) {
+            if (ai.hp < ai.maxHp * 0.4) {
+                const healIdx = ai.skills.findIndex(s => s.type === 'heal_shield');
+                if (healIdx !== -1 && Math.random() < 0.65) return healIdx;
+            }
+            return Math.floor(Math.random() * ai.skills.length);
+        }
+
+        function executeSkill(skillIndex, fromAI = false) {
+            if (gameState.isGameOver) return;
+            if (!fromAI && gameState.isBusy) return;
+
+            const attacker = getActiveFighter();
+            const defender = getOpponentFighter(attacker);
+            const skill = attacker.skills[skillIndex];
+            if (!skill) return;
+
+            gameState.isBusy = true;
+            updateCombatHUD();
+
+            const attackerRig = getRigForFighter(attacker);
+            const defenderRig = getRigForFighter(defender);
+            const attSide = attacker.id === 'p1' ? 'left' : 'right';
+            const defSide = defender.id === 'p1' ? 'left' : 'right';
+
+            // Tocar som correspondente
+            if (skill.sound === 'laser') sound.playLaser();
+            else if (skill.sound === 'freeze') sound.playFreeze();
+            else if (skill.sound === 'fart') sound.playFartGun();
+            else if (skill.sound === 'explosion') sound.playExplosion();
+            else if (skill.sound === 'heal') sound.playHeal();
+            else sound.playHit();
+
+            // Habilidade de suporte / cura
+            if (skill.type === 'heal_shield') {
+                const healAmount = Math.round(skill.power + attacker.atk * 0.45);
+                attacker.hp = Math.min(attacker.maxHp, attacker.hp + healAmount);
+                attacker.dirtLevel = 0;
+                attacker.stinkTurns = 0;
+                attacker.bananaCharge = Math.min(100, attacker.bananaCharge + 25);
+
+                setMinionExpression(attackerRig, 'happy', 1.2);
+                spawnImpactParticles(new THREE.Vector3(attackerRig.baseX, 1.5, 0), 0x4ade80, 22);
+                showFloatingText(attSide, `+${healAmount} HP 💚`, 'text-emerald-400');
+                addLog(`💚 <b class="text-yellow-300">${attacker.name}</b> usou <b>${skill.name}</b>, recuperou <b>+${healAmount} HP</b> e limpou seus efeitos!`);
+
+                setTimeout(() => {
+                    gameState.isBusy = false;
+                    endTurn();
+                }, 850);
+                return;
+            }
+
+            // Animação de disparo / investida e expressão de ataque
+            setMinionExpression(attackerRig, 'attack', 0.95);
+            attackerRig.rightArmGroup.rotation.x = -Math.PI * 0.45;
+            setTimeout(() => {
+                if (attackerRig) attackerRig.rightArmGroup.rotation.x = 0;
+            }, 350);
+
+            const projColor = skill.type === 'freeze'
+                ? 0x38bdf8
+                : skill.type === 'stink'
+                    ? 0x84cc16
+                    : skill.type === 'explosion'
+                        ? 0xf97316
+                        : 0xfacc15;
+
+            const startPos = new THREE.Vector3(attackerRig.baseX, 1.65, 0);
+            const endPos = new THREE.Vector3(defenderRig.baseX, 1.55, 0);
+
+            spawnProjectile(startPos, endPos, projColor, () => {
+                const isCrit = skill.type === 'crit' || Math.random() < 0.16;
+                const baseRaw = attacker.atk * skill.power * (isCrit ? 1.35 : 1.0);
+                const mitigated = Math.max(8, Math.round(baseRaw - defender.def * 0.42 + (Math.random() * 6 - 3)));
+
+                defender.hp = Math.max(0, defender.hp - mitigated);
+                attacker.bananaCharge = Math.min(100, attacker.bananaCharge + Math.max(28, Math.round(mitigated * 1.15)));
+
+                if (skill.type === 'freeze') {
+                    defender.frozenTurns = 1;
+                } else if (skill.type === 'stink') {
+                    defender.stinkTurns = 2;
+                }
+
+                if (skill.type === 'explosion' || mitigated >= 24) {
+                    defender.dirtLevel = Math.min(3, defender.dirtLevel + 1);
+                }
+
+                setMinionExpression(defenderRig, 'hurt', 1.25);
+                triggerCameraShake(skill.type === 'explosion' ? 0.36 : 0.2, 0.25);
+                spawnImpactParticles(endPos, projColor, 26);
+
+                showFloatingText(
+                    defSide,
+                    `-${mitigated}${isCrit ? ' CRÍTICO!' : ''}`,
+                    isCrit ? 'text-orange-400' : 'text-red-400'
+                );
+
+                let extraNote = '';
+                if (skill.type === 'freeze') extraNote = ' e <b>congelou</b> o alvo!';
+                if (skill.type === 'stink') extraNote = ' e deixou o alvo <b>verde e fedido</b>!';
+
+                addLog(`${skill.icon} <b>${attacker.name}</b> usou <b>${skill.name}</b> em <b>${defender.name}</b> causando <b class="text-red-400">-${mitigated} HP</b>${extraNote}`);
+
+                updateCombatHUD();
+
+                setTimeout(() => {
+                    gameState.isBusy = false;
+                    if (!checkVictoryCondition()) {
+                        endTurn();
+                    }
+                }, 650);
+            });
+        }
+
+        /* ==========================================================================
+           10. CUTSCENE CINEMATOGRÁFICA: BANANA FATALITY (ARREMESSO + TRANSFORMAÇÃO)
+           ========================================================================== */
+        function createDetailedBanana3D(scale = 1) {
+            const banana = new THREE.Group();
+
+            // Corpo curvo da banana
+            const bodyGeo = new THREE.TorusGeometry(1.0, 0.3, 14, 28, Math.PI * 0.82);
+            const bodyMat = new THREE.MeshStandardMaterial({
+                color: 0xfacc15,
+                emissive: 0xca8a04,
+                emissiveIntensity: 0.35,
+                roughness: 0.25,
+                metalness: 0.1
+            });
+            const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+            bodyMesh.rotation.z = Math.PI * 0.1;
+            banana.add(bodyMesh);
+
+            // Pontas escuras da banana
+            const tipMat = new THREE.MeshStandardMaterial({ color: 0x422006, roughness: 0.8 });
+            const tip1 = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 10), tipMat);
+            tip1.position.set(0.95, 0.31, 0);
+            banana.add(tip1);
+
+            const tip2 = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.16, 0.28, 10), tipMat);
+            tip2.position.set(-0.96, 0.28, 0);
+            tip2.rotation.z = 0.45;
+            banana.add(tip2);
+
+            banana.scale.setScalar(scale);
+            return banana;
+        }
+
+        function clearFatalityEffects() {
+            miniBananas.forEach(mb => scene.remove(mb.mesh));
+            miniBananas = [];
+            shockwaveRings.forEach(sw => scene.remove(sw.mesh));
+            shockwaveRings = [];
+            if (giantBananaThrow) {
+                scene.remove(giantBananaThrow.mesh);
+                giantBananaThrow = null;
+            }
+            if (p1Rig) p1Rig.root.visible = true;
+            if (p2Rig) p2Rig.root.visible = true;
+        }
+
+        function spawnOpponentMiniBananasExplosion(originPos, count = 44) {
+            for (let i = 0; i < count; i++) {
+                const mini = createDetailedBanana3D(0.24 + Math.random() * 0.14);
+                mini.position.set(
+                    originPos.x + (Math.random() - 0.5) * 0.9,
+                    originPos.y + 0.5 + Math.random() * 1.6,
+                    originPos.z + (Math.random() - 0.5) * 0.9
+                );
+                scene.add(mini);
+
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2.2 + Math.random() * 6.5;
+                miniBananas.push({
+                    mesh: mini,
+                    vel: new THREE.Vector3(
+                        Math.cos(angle) * speed,
+                        4.5 + Math.random() * 6.5,
+                        Math.sin(angle) * speed
+                    ),
+                    rotVel: new THREE.Vector3(
+                        (Math.random() - 0.5) * 16,
+                        (Math.random() - 0.5) * 16,
+                        (Math.random() - 0.5) * 16
+                    ),
+                    life: 5.5 + Math.random() * 2.0
+                });
+            }
+
+            // Onda de choque dourada no impacto
+            const swGeo = new THREE.RingGeometry(0.35, 0.75, 36);
+            const swMat = new THREE.MeshBasicMaterial({
+                color: 0xfef08a,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.95
+            });
+            const swMesh = new THREE.Mesh(swGeo, swMat);
+            swMesh.rotation.x = -Math.PI / 2;
+            swMesh.position.set(originPos.x, 0.06, originPos.z);
+            scene.add(swMesh);
+            shockwaveRings.push({ mesh: swMesh, life: 1.0 });
+        }
+
+        function triggerBananaSpecial() {
+            if (gameState.isGameOver) return;
+            const attacker = getActiveFighter();
+            const defender = getOpponentFighter(attacker);
+            if (!attacker || attacker.bananaCharge < 100) return;
+
+            gameState.isBusy = true;
+            attacker.bananaCharge = 0;
+            updateCombatHUD();
+
+            sound.playBananaSpecial();
+
+            const cine = document.getElementById('banana-cinematic');
+            document.getElementById('banana-cine-eyebrow').textContent = `${attacker.name.toUpperCase()} ATIVOU O ESPECIAL`;
+            document.getElementById('banana-cine-title').textContent = 'BANANA GIGANTE!';
+            document.getElementById('banana-cine-subtitle').textContent = 'PREPARE-SE PARA O IMPACTO';
+            cine.classList.remove('impact');
+            cine.classList.add('active');
+
+            const attackerRig = getRigForFighter(attacker);
+            const defenderRig = getRigForFighter(defender);
+            const attSide = attacker.id === 'p1' ? 'left' : 'right';
+            const defSide = defender.id === 'p1' ? 'left' : 'right';
+
+            // Postura de arremesso do atacante
+            setMinionExpression(attackerRig, 'attack', 1.4);
+            attackerRig.root.position.x = attackerRig.baseX + (attSide === 'left' ? 0.85 : -0.85);
+            attackerRig.rightArmGroup.rotation.x = -Math.PI * 0.65;
+
+            setTimeout(() => {
+                attackerRig.rightArmGroup.rotation.x = Math.PI * 0.45;
+                setTimeout(() => {
+                    if (attackerRig) {
+                        attackerRig.root.position.x = attackerRig.baseX;
+                        attackerRig.rightArmGroup.rotation.x = 0;
+                    }
+                }, 350);
+
+                // Banana Gigante 3D sendo arremessada de um lado da arena até o oponente
+                const thrownBanana = createDetailedBanana3D(1.45);
+                const startPos = new THREE.Vector3(attackerRig.baseX, 2.2, 0);
+                const endPos = new THREE.Vector3(defenderRig.baseX, 1.45, 0);
+                thrownBanana.position.copy(startPos);
+                scene.add(thrownBanana);
+
+                giantBananaThrow = {
+                    mesh: thrownBanana,
+                    start: startPos,
+                    end: endPos,
+                    progress: 0,
+                    onImpact: () => {
+                        cine.classList.add('impact');
+                        setMinionExpression(defenderRig, 'hurt', 1.6);
+                        triggerCameraShake(0.68, 0.65);
+
+                        const specialDamage = Math.round(attacker.atk * 2.55 + 35);
+                        defender.hp = Math.max(0, defender.hp - specialDamage);
+                        defender.dirtLevel = 3;
+
+                        // Transforma o oponente em dezenas de pequenas bananas 3D!
+                        defenderRig.root.visible = false;
+                        const impactOrigin = new THREE.Vector3(defenderRig.baseX, 0.2, 0);
+                        spawnOpponentMiniBananasExplosion(impactOrigin, 44);
+                        spawnImpactParticles(new THREE.Vector3(defenderRig.baseX, 1.5, 0), 0xfacc15, 55);
+
+                        showFloatingText(defSide, `-${specialDamage} 🍌 BANANA!`, 'text-yellow-300');
+                        addLog(`🍌💥 <b class="text-yellow-300">${attacker.name}</b> arremessou a <b>BANANA GIGANTE</b> e transformou <b>${defender.name}</b> em pequenas bananas (<b>-${specialDamage} HP</b>)!`);
+
+                        updateCombatHUD();
+
+                        setTimeout(() => {
+                            cine.classList.remove('active', 'impact');
+                            gameState.isBusy = false;
+                            if (!checkVictoryCondition()) {
+                                defenderRig.root.visible = true;
+                                endTurn();
+                            }
+                        }, 1350);
+                    }
+                };
+            }, 420);
+        }
+
+        function endTurn() {
+            if (gameState.isGameOver) return;
+            gameState.currentTurnIndex = (gameState.currentTurnIndex + 1) % gameState.turnQueue.length;
+            beginTurn();
+        }
+
+        function checkVictoryCondition() {
+            const p1Dead = gameState.p1.hp <= 0;
+            const p2Dead = gameState.p2.hp <= 0;
+            if (!p1Dead && !p2Dead) return false;
+
+            gameState.isGameOver = true;
+            sound.playVictory();
+
+            const p1Won = p2Dead;
+            const winner = p1Won ? gameState.p1 : gameState.p2;
+
+            document.getElementById('winner-title').textContent = `🏆 ${winner.name.toUpperCase()} VENCEU!`;
+            document.getElementById('winner-desc').textContent = p1Won
+                ? 'Vitória espetacular no Laboratório 3D do Gru!'
+                : 'O adversário dominou a arena desta vez!';
+
+            const rewardPanel = document.getElementById('story-reward-panel');
+            const continueBtn = document.getElementById('story-continue-btn');
+            rewardPanel.classList.add('hidden');
+            continueBtn.classList.add('hidden');
+
+            if (gameState.mode === 'story' && p1Won && gameState.activeStoryChapter) {
+                const ch = gameState.activeStoryChapter;
+                if (!saveData.completedChapters.includes(ch.id)) {
+                    saveData.completedChapters.push(ch.id);
+                    saveData.bonus.hp += ch.rewardBonus.hp || 0;
+                    saveData.bonus.atk += ch.rewardBonus.atk || 0;
+                    saveData.bonus.def += ch.rewardBonus.def || 0;
+                    if (ch.unlockId && !saveData.unlockedIds.includes(ch.unlockId)) {
+                        saveData.unlockedIds.push(ch.unlockId);
+                    }
+                    if (ch.id < STORY_CHAPTERS.length) {
+                        saveData.selectedChapter = ch.id + 1;
+                    }
+                    persistSaveData();
+                }
+
+                rewardPanel.innerHTML = `
+                    <div class="text-xs font-tech text-cyan-300 uppercase mb-1">Recompensa do Capítulo ${ch.id}</div>
+                    <div class="text-sm font-bold text-yellow-300">🎁 ${ch.rewardText}</div>
+                `;
+                rewardPanel.classList.remove('hidden');
+                continueBtn.classList.remove('hidden');
+            }
+
+            setTimeout(() => {
+                document.getElementById('victory-modal').classList.remove('hidden');
+            }, 650);
+
+            return true;
+        }
+
+        /* ==========================================================================
+           11. INICIALIZAÇÃO GLOBAL
+           ========================================================================== */
+        window.onload = function () {
+            initThreeJS();
+        };
+    </script>
+</body>
+</html>
